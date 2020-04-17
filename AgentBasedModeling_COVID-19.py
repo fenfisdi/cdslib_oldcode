@@ -207,6 +207,7 @@ state_avoidness_dynamics_by_group = {
     }
 }
 
+#==============================================
 contagion_states_transitions_dict = {
     'susceptible': {
         'becomes_into': ['exposed'],
@@ -234,7 +235,7 @@ contagion_states_transitions_dict = {
     }
 }
 
-groups_contagion_probabilities = {
+contagion_susceptibility_groups_probabilities = {
     'not-vulnerable': 0.5,
     'vulnerable': 0.9
 }
@@ -277,6 +278,11 @@ states_contagion_dynamics = {
         'spread_probability': 0.4
     }
 }
+
+inmunization_dict = {
+
+}
+#==================================================
 
 states_time_functions_dict = {
     'not-vulnerable': {
@@ -376,6 +382,8 @@ states_transitions_by_group_dict = {
     }
 }
 
+#===============================================
+
 states_hospitalization_by_group_dict = {
     'not-vulnerable': {
         'susceptible': {
@@ -443,8 +451,8 @@ states_hospitalization_by_group_dict = {
     }
 }
 
-# Here we are trying to model the probability that any agent is taken into account for diagnosis
-# according to its state and vulnerability group
+# Here we are trying to model the probability that any agent is taken into
+# account for diagnosis according to its state and vulnerability group
 states_diagnosis_by_group_dict = {
     'not-vulnerable': {
         'susceptible': {
@@ -745,88 +753,89 @@ class Agent():
         """
         # Define agent label
         self.agent = agent
-        
+
         # Define position
         self.x = x
         self.y = y
-        
+
         # Define initial velocity between (-vmax , +vmax)
         self.vx, self.vy = 2. * vmax * np.random.random_sample(dim) - vmax
-        
+
         # Initialize group, state, and diagnosed state
         self.group = group
-        
+
         self.state = state
-    
+
         self.diagnosed = diagnosed
-        
+
         self.hospitalized = False
-        
+
         self.requires_UCI = False
-        
+
         self.waiting_diagnosis = False
-        
+
         self.time_waiting_diagnosis = None
-        
+
         self.infected_by = None
-        
+
         self.inmunization_level = inmunization_level
-        
+
         self.alertness = False
-        
+
         self.alerted_by = []
-        
+
         self.state_max_time = None
-        
+
         self.state_time = 0
-        
+
         self.live_state = 'alive'
-        
+
         self.age = age
-        
+
         # Determine age group
         self.determine_age_group()
-        
-    
+
+
     def determine_age_group(self):
         """
         """
         for age_group in population_age_groups_dict.keys():
-            
+
             age_group_dict = population_age_groups_dict[age_group]
-            
-            if age_group_dict['min_age'] <= self.age and np.floor(self.age) <= age_group_dict['max_age']:
-                
+
+            if (age_group_dict['min_age'] <= self.age
+            and np.floor(self.age) <= age_group_dict['max_age']):
+
                 self.age_group = age_group
 
-    
+
     def age_and_death_verification(self, dt_scale_in_years: float):
         """
         """
         dead = False
-        
+
         #=============================================
         # Increment age
         self.age += dt_scale_in_years
-        
+
         # Determine age group
         self.determine_age_group()
-        
+
         #=============================================
         # Verify: natural death ? ... Throw the dice
         dice = np.random.random_sample()
-        
+
         if dice <= population_age_groups_dict[self.age_group]['mortality_probability']:
             # The agent died
             dead = True
-            
+
             # Agent died by natural reasons
             self.live_state = 'natural death'
-        
+
         #=============================================
         # Verify: dead by disease ? ... Throw the dice
         dice = np.random.random_sample()
-        
+
         if states_mortality_by_group_dict[self.group][self.state]['mortality_probability']:
             if dice <= states_mortality_by_group_dict[self.group][self.state]['mortality_probability']:
                 # The agent died
@@ -834,10 +843,10 @@ class Agent():
 
                 # Agent die by disease
                 self.live_state = 'dead by disease'
-        
+
         return dead
-    
-    
+
+
     def update_diagnosis_state(self, dt: float, changed_state: bool=False):
         """
         """
@@ -906,10 +915,10 @@ class Agent():
 
                 self.waiting_diagnosis = False
 
-                self.time_waiting_diagnosis = None 
-            
-    
-    def update_hospitalization_state(self):      
+                self.time_waiting_diagnosis = None
+
+
+    def update_hospitalization_state(self):
         # Agent can be hospitalized ?
         if states_hospitalization_by_group_dict[
             self.group][self.state]['can_be_hospitalized']:
@@ -948,7 +957,7 @@ class Agent():
             self.hospitalized = False
 
             self.requires_UCI = False
-                    
+
 
     def alert_avoid_agents(self, velocities_to_avoid: list):
         """
@@ -957,34 +966,33 @@ class Agent():
         # Retrieve own velocity
         own_initial_velocity = np.array([self.vx, self.vy])
         norm_own_initial_velocity = np.sqrt(np.dot(own_initial_velocity, own_initial_velocity))
-        
+
         #=============================================
         # Create a vector to save new velocity vector
         new_velocity = np.array([0., 0.], dtype='float64')
-        
+
         #=============================================
         # Avoid velocities
         for velocity_to_avoid in velocities_to_avoid:
-            
+
             norm_velocity_to_avoid = np.sqrt(np.dot(velocity_to_avoid, velocity_to_avoid))
-            
+
             # Find angle theta between both velocities
             costheta = np.dot(own_initial_velocity, velocity_to_avoid) / (norm_own_initial_velocity*norm_velocity_to_avoid)
             costheta = 1.0 if costheta > 1.0 else (0.0 if costheta < 0.0 else costheta)
-            
+
             v_parallel = own_initial_velocity * costheta
             v_perpendicular = - own_initial_velocity * np.sqrt(1.0 - costheta**2)
-            
+
             #=============================================
             # Add up to new_velocity
             new_velocity += v_parallel + v_perpendicular
-        
+
         #=============================================
         # Disaggregate new_velocity
         self.vx, self.vy = new_velocity
-            
-        
-    
+
+
     def move(self, dt: float, maximum_free_random_speed: float, xmin: float, xmax: float, ymin: float, ymax: float):
         """
         """
@@ -1026,7 +1034,7 @@ class Agent():
         self.x = self.x + self.vx * dt
         self.y = self.y + self.vy * dt
 
-        
+
         if not self.alertness:
             #=============================================
             # Evolve velocity as a random walk
@@ -1044,6 +1052,8 @@ class Agent():
 # inmunization_level
 # Quarentine
 # Virus halo
+# Revisar lo del árbol de búsqueda rápida y los estados de los agentes
+# ... que no cambien esos estados!
 
 class Population():
     """
@@ -1066,46 +1076,45 @@ class Population():
         self.step = 0
         self.dt = 1
         self.dt_scale_in_years = dt_scale_in_years
-        
+
         # Initialize population number
         self.initial_population_number = population_number
         self.population_numbers = [self.initial_population_number]
-            
-        
+
         # Initialize vulnerable people number
         self.vulnerable_number = vulnerable_number
-        
+
         # Initialize maximum free random speed
         self.maximum_free_random_speed = maximum_free_random_speed
-        
+
         # Initialize horizontal and vertical length
         self.xmax = horizontal_length/2
         self.xmin = - horizontal_length/2
         self.ymax = vertical_length/2
         self.ymin = - vertical_length/2
-    
+
         # Create list of agents
         self.population = {
             agent_index: Agent(
                 # Define label
                 agent=agent_index,
-                
+
                 # Define positions as random
                 x=(self.xmax - self.xmin) * np.random.random_sample() + self.xmin,
                 y=(self.ymax - self.ymin) * np.random.random_sample() + self.ymin,
-                
+
                 # Set up maximum speed
                 vmax=maximum_speed,
-                
+
                 # Define population group
                 group=population_group_list[agent_index],
-                
+
                 # Define state
                 state=population_state_list[agent_index],
-                
+
                 # Define agent's age
                 age=20 # population_age_list[agent_index]
-                
+
             ) for agent_index in range(self.initial_population_number)
         }
 
@@ -1113,21 +1122,21 @@ class Population():
         keys = list(self.population[0].__dict__.keys())
         keys.append('step')
         self.agents_info_df = pd.DataFrame(columns = keys)
-        
+
         # Populate DataFrame
         self.populate_df()
-        
-        
+
+
     def evolve_population(self):
         """
         """
         # Evolve step
         self.step = self.step + self.dt
-        
+
         #=============================================
         # Check dead agents
         self.check_dead_agents()
-        
+
         #=============================================
         # Update diagnosis and hospitalization states
 
@@ -1143,24 +1152,24 @@ class Population():
         #=============================================
         # Update alertness states and avoid avoidable agents
         self.update_alertness_states()
-        
+
         #=============================================
         # Change population states by means of contagion
         self.transition_by_contagion()
 
         #=============================================
         # Move agents
-        
+
         # Cycle runs along all agents in current population
         for agent_index in self.population.keys():
-            
+
             self.population[agent_index].move(self.dt, self.maximum_free_random_speed, self.xmin, self.xmax, self.ymin, self.ymax)
-        
+
         #=============================================
         # Populate DataFrame
         self.populate_df()
-        
-        
+
+
     def check_dead_agents(self):
         """
         """     
@@ -1275,21 +1284,21 @@ class Population():
         #=============================================
         # Cycle runs along all agents in current population
         for agent_index in self.population.keys():
-        
+
             # Agent can get infected ?
             if states_contagion_dynamics[self.population[agent_index].state]['can_get_infected']:
 
                 # Retrieve agent location
                 agent_location = [self.population[agent_index].x, self.population[agent_index].y]
-                
+
                 # List to save who infected the agent
                 infected_by = []
 
                 # Cycle through each spreader to see if the agent gets infected by the spreader
                 for state in states_contagion_dynamics.keys():
-                    
+
                     if states_contagion_dynamics[state]['can_spread'] and self.spatial_trees[state]:
-                        
+
                         # Detect if any spreader is inside a distance equal to the corresponding spread_radius
                         points_inside_radius = self.spatial_trees[state].query_ball_point(
                             agent_location,
@@ -1300,17 +1309,19 @@ class Population():
                         
                         # If agent_index in spreaders_indices_inside_radius, then remove it
                         if agent_index in spreaders_indices_inside_radius:
-                            
+
                             spreaders_indices_inside_radius = np.setdiff1d(
                                 spreaders_indices_inside_radius,
                                 agent_index
                             )
 
                         # Calculate joint probability for contagion
-                        joint_probability = (1.0 - self.population[agent_index].inmunization_level)                                             * groups_contagion_probabilities[self.population[agent_index].group]                                             * states_contagion_dynamics[state]['spread_probability']
+                        joint_probability = (1.0 - self.population[agent_index].inmunization_level) \
+                                        * contagion_susceptibility_groups_probabilities[self.population[agent_index].group] \
+                                        * states_contagion_dynamics[state]['spread_probability']
 
                         # Check if got infected
-                        for spreader_agent_index in spreaders_indices_inside_radius:                        
+                        for spreader_agent_index in spreaders_indices_inside_radius:
                             # Throw the dice
                             dice = np.random.random_sample()
 
@@ -1344,7 +1355,7 @@ class Population():
                         if dice <= cummulative_probability:
 
                             self.population[agent_index].state = becomes_into_state
-                            
+
                             self.population[agent_index].update_diagnosis_state(self.step, changed_state=True)
 
                             self.population[agent_index].state_time = 0
@@ -1737,38 +1748,38 @@ def agents_times_series_plot(
 
 if __name__ == "__main__":
 
-population_group_list, population_state_list = initial_population_group_state_scene(
-    population_number,
-    vulnerable_number
-)
+    population_group_list, population_state_list = initial_population_group_state_scene(
+        population_number,
+        vulnerable_number
+    )
 
-agents = Population(
-    population_number=population_number,
-    vulnerable_number=vulnerable_number,
-    population_group_list=population_group_list,
-    population_state_list=population_state_list,
-    horizontal_length=horizontal_length,
-    vertical_length=vertical_length,
-    maximum_speed=maximum_speed,
-    maximum_free_random_speed=maximum_free_random_speed,
-    dt_scale_in_years=dt_scale_in_years
-)
-agents.plot_current_locations()
+    agents = Population(
+        population_number=population_number,
+        vulnerable_number=vulnerable_number,
+        population_group_list=population_group_list,
+        population_state_list=population_state_list,
+        horizontal_length=horizontal_length,
+        vertical_length=vertical_length,
+        maximum_speed=maximum_speed,
+        maximum_free_random_speed=maximum_free_random_speed,
+        dt_scale_in_years=dt_scale_in_years
+    )
+    agents.plot_current_locations()
 
-start_time = time.time()
+    start_time = time.time()
 
-for i in range(100):
-    agents.evolve_population()
+    for i in range(100):
+        agents.evolve_population()
 
-end_time = time.time()
-elapsed_time = end_time - start_time
-print(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
 
-agents.plot_current_locations()
+    agents.plot_current_locations()
 
-agents.animate_population()
+    agents.animate_population()
 
-agents_times_series_plot(agents.agents_info_df)
+    agents_times_series_plot(agents.agents_info_df)
 
 
 
