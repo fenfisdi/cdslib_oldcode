@@ -774,4 +774,9 @@ if __name__ == "__main__":
 
     basic_population_graphs.agents_times_series_plot(basic_population.agents_info_df)
 
+    basic_population_graphs.agents_times_series_plot(
+        basic_population.agents_info_df,
+        mode='infection'
+        )
+
     basic_population.agents_info_df.head()

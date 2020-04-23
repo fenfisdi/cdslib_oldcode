@@ -261,13 +261,23 @@ class BasicPopulationGraphs:
         ):
         """
         """
-        return go.Scatter(
-            x=x,
-            y=y,
-            mode='lines',
-            line=self.disease_states_line_colors[name],
-            name=name
-        )
+        states_names = list(self.disease_states_line_colors.keys())
+
+        if name in states_names:
+            return go.Scatter(
+                x=x,
+                y=y,
+                mode='lines',
+                line=self.disease_states_line_colors[name],
+                name=name
+            )
+        else:
+            return go.Scatter(
+                x=x,
+                y=y,
+                mode='lines',
+                name=name
+            )
 
     def agents_times_series_plot(
         self,
@@ -316,3 +326,54 @@ class BasicPopulationGraphs:
             fig.update_layout(hovermode='x unified')
 
             fig.show()
+
+        if mode == 'infection':
+            infection_df = agents_dataframe.copy()
+
+            infection_df['infection_state'] = func(infection_df['state'].to_list())
+
+            df = infection_df.loc[
+                infection_df['live_state'] == 'alive' 
+                ][['step', 'agent', 'infection_state']].groupby(
+                    ['step', 'infection_state'],
+                    as_index=False
+                    ).count().copy()
+
+            df.rename(
+                columns={'agent':'agents'},
+                inplace=True
+                )
+            
+            states = infection_df['infection_state'].unique()
+            
+            fig = go.Figure()
+            
+            for state in states:
+                subdf = df.loc[
+                    df['infection_state'] == state
+                ][['step', 'agents']].copy()
+
+                # Add traces
+                fig.add_trace(
+                    self.go_line(
+                        x=subdf['step'].to_list(),
+                        y=subdf['agents'].to_list(),
+                        name=state
+                    )
+                )
+
+            fig.update_xaxes(rangeslider_visible=True)
+            
+            fig.update_layout(hovermode='x unified')
+
+            fig.show()
+
+def func(series):
+    new_series = []
+    for x in series:
+        if x == 'susceptible':
+            new_series.append(x)
+        else:
+            new_series.append('infected')
+
+    return new_series
