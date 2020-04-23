@@ -70,6 +70,105 @@ if __name__ == "__main__":
         'vulnerable'
         ]
 
+    dynamics_of_the_disease_states_transitions_info = {
+        'disease_states_time_functions': {
+            'not-vulnerable': {
+                'susceptible': {
+                    'time_function': None
+                    },
+                'exposed': {
+                    'time_function': time_function_1
+                    },
+                'asymptomatic': {
+                    'time_function': time_function_2
+                    },
+                'mildly-ill': {
+                    'time_function': time_function_2
+                    },
+                'seriously-ill': {
+                    'time_function': time_function_2
+                    },
+                'recovered': {
+                    'time_function': time_function_3
+                    }
+                },
+            'vulnerable': {
+                'susceptible': {
+                    'time_function': None
+                    },
+                'exposed': {
+                    'time_function': time_function_1
+                    },
+                'asymptomatic': {
+                    'time_function': time_function_2
+                    },
+                'mildly-ill': {
+                    'time_function': time_function_2
+                    },
+                'seriously-ill': {
+                    'time_function': time_function_2
+                    },
+                'recovered': {
+                    'time_function': time_function_3
+                    }
+                }
+            },
+        'disease_states_transitions_by_vulnerability_group': {
+            'not-vulnerable': {
+                'susceptible': {
+                    'becomes_into': None,
+                    'transition_probability': None
+                    },
+                'exposed': {
+                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.60, 0.25, 0.15]
+                    },
+                'asymptomatic': {
+                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.75, 0.20, 0.05]
+                    },
+                'mildly-ill': {
+                    'becomes_into': ['seriously-ill', 'recovered'],
+                    'transition_probability': [0.20, 0.80]
+                    },
+                'seriously-ill': {
+                    'becomes_into': ['recovered'],
+                    'transition_probability': [0.95]
+                    },
+                'recovered': {
+                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.90, 0.07, 0.03]
+                    }
+                },
+            'vulnerable': {
+                'susceptible': {
+                    'becomes_into': None,
+                    'transition_probability': None
+                    },
+                'exposed': {
+                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.15, 0.25, 0.60]
+                    },
+                'asymptomatic': {
+                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.05, 0.20, 0.75]
+                    },
+                'mildly-ill': {
+                    'becomes_into': ['seriously-ill', 'recovered'],
+                    'transition_probability': [0.80, 0.20]
+                    },
+                'seriously-ill': {
+                    'becomes_into': ['recovered'],
+                    'transition_probability': [0.20]
+                    },
+                'recovered': {
+                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'transition_probability': [0.70, 0.15, 0.15]
+                    }
+                }
+            }
+        }
+
     population_age_groups_info = {
         'child': {
             'min_age': 0,
@@ -310,6 +409,8 @@ if __name__ == "__main__":
     agents_info = AgentsInfo(
         disease_states=disease_states,
         vulnerability_groups=vulnerability_groups,
+        dynamics_of_the_disease_states_transitions_info= \
+            dynamics_of_the_disease_states_transitions_info,
         population_age_groups_info=population_age_groups_info,
         mortality_of_disease_states_by_vulnerability_group= \
             mortality_of_disease_states_by_vulnerability_group,
@@ -393,105 +494,6 @@ if __name__ == "__main__":
             },
         'inmunization_level_info': {
 
-            }
-        }
-
-    dynamics_of_the_disease_states_transitions_info = {
-        'disease_states_time_functions': {
-            'not-vulnerable': {
-                'susceptible': {
-                    'time_function': None
-                    },
-                'exposed': {
-                    'time_function': time_function_1
-                    },
-                'asymptomatic': {
-                    'time_function': time_function_2
-                    },
-                'mildly-ill': {
-                    'time_function': time_function_2
-                    },
-                'seriously-ill': {
-                    'time_function': time_function_2
-                    },
-                'recovered': {
-                    'time_function': time_function_3
-                    }
-                },
-            'vulnerable': {
-                'susceptible': {
-                    'time_function': None
-                    },
-                'exposed': {
-                    'time_function': time_function_1
-                    },
-                'asymptomatic': {
-                    'time_function': time_function_2
-                    },
-                'mildly-ill': {
-                    'time_function': time_function_2
-                    },
-                'seriously-ill': {
-                    'time_function': time_function_2
-                    },
-                'recovered': {
-                    'time_function': time_function_3
-                    }
-                }
-            },
-        'disease_states_transitions_by_vulnerability_group': {
-            'not-vulnerable': {
-                'susceptible': {
-                    'becomes_into': None,
-                    'transition_probability': None
-                    },
-                'exposed': {
-                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.60, 0.25, 0.15]
-                    },
-                'asymptomatic': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.75, 0.20, 0.05]
-                    },
-                'mildly-ill': {
-                    'becomes_into': ['seriously-ill', 'recovered'],
-                    'transition_probability': [0.20, 0.80]
-                    },
-                'seriously-ill': {
-                    'becomes_into': ['recovered'],
-                    'transition_probability': [0.95]
-                    },
-                'recovered': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.90, 0.07, 0.03]
-                    }
-                },
-            'vulnerable': {
-                'susceptible': {
-                    'becomes_into': None,
-                    'transition_probability': None
-                    },
-                'exposed': {
-                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.15, 0.25, 0.60]
-                    },
-                'asymptomatic': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.05, 0.20, 0.75]
-                    },
-                'mildly-ill': {
-                    'becomes_into': ['seriously-ill', 'recovered'],
-                    'transition_probability': [0.80, 0.20]
-                    },
-                'seriously-ill': {
-                    'becomes_into': ['recovered'],
-                    'transition_probability': [0.20]
-                    },
-                'recovered': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.70, 0.15, 0.15]
-                    }
-                }
             }
         }
 
@@ -618,8 +620,6 @@ if __name__ == "__main__":
         disease_states=disease_states,
         vulnerability_groups=vulnerability_groups,
         contagion_dynamics_info=contagion_dynamics_info,
-        dynamics_of_the_disease_states_transitions_info= \
-            dynamics_of_the_disease_states_transitions_info,
         social_distancing_info=social_distancing_info
         )
 
@@ -770,6 +770,8 @@ if __name__ == "__main__":
 
     basic_population_graphs.plot_current_locations()
 
-    #agents.animate_population()
+    # basic_population_graphs.animate_population()
 
     basic_population_graphs.agents_times_series_plot(basic_population.agents_info_df)
+
+    basic_population.agents_info_df.head()

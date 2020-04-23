@@ -6,11 +6,9 @@ from scipy import spatial
 from cdslib.agents import AgentsInfo, Agent
 
 # TODO
-# inmunization_level ... check
-# Quarentine ... check
+# inmunization_level
+# Quarentine
 # Virus halo
-# Revisar lo del árbol de búsqueda rápida y los estados de los agentes
-# ... que no cambien esos estados!
 
 class BasicPopulation:
     """
@@ -20,7 +18,6 @@ class BasicPopulation:
         disease_states: list,
         vulnerability_groups: list,
         contagion_dynamics_info: dict,
-        dynamics_of_the_disease_states_transitions_info: dict,
         social_distancing_info: dict
         ):
 
@@ -49,17 +46,6 @@ class BasicPopulation:
                 'inmunization_level_info'
                 ]
 
-        # dynamics_of_the_disease_states_transitions_info
-        self.disease_states_time_functions = \
-            dynamics_of_the_disease_states_transitions_info[
-                'disease_states_time_functions'
-                ]
-
-        self.disease_states_transitions_by_vulnerability_group = \
-            dynamics_of_the_disease_states_transitions_info[
-                'disease_states_transitions_by_vulnerability_group'
-                ]
-
         # social_distancing_info
         self.dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
             social_distancing_info[
@@ -70,7 +56,6 @@ class BasicPopulation:
             social_distancing_info[
                 'dynamics_of_avoidance_of_disease_states_by_vulnerability_group'
                 ]
-
 
 
     def create_population(
@@ -140,7 +125,7 @@ class BasicPopulation:
         }
 
         # Initialize Pandas DataFrame
-        keys = list(self.population[0].__dict__.keys())
+        keys = list(self.population[0].getkeys())
         keys.append('step')
         self.agents_info_df = pd.DataFrame(columns = keys)
 
@@ -159,16 +144,12 @@ class BasicPopulation:
         self.check_dead_agents()
 
         #=============================================
-        # Update diagnosis and hospitalization states
+        # Change population states by means of state transition
+        # and update diagnosis and hospitalization states
 
         # Cycle runs along all agents in current population
         for agent_index in self.population.keys():
-            self.population[agent_index].update_diagnosis_state(self.step)
-            self.population[agent_index].update_hospitalization_state()
-
-        #=============================================
-        # Change population states by means of state transition
-        self.state_transition()
+            self.population[agent_index].state_transition(self.dt)
 
         #=============================================
         # Update alertness states and avoid avoidable agents
@@ -218,68 +199,12 @@ class BasicPopulation:
                 removed_agent = population.pop(agent_index)
                 
                 # Add agent to agents_info_df
-                agent_dict = removed_agent.__dict__
+                agent_dict = removed_agent.getstate()
                 
                 self.populate_df(agent_dict)
                 
         # Copy population into self.population
         self.population = copy.deepcopy(population)
-
-
-    def state_transition(self):
-        """
-        """
-        # Cycle runs along all agents in current population
-        for agent_index in self.population.keys():
-
-            self.population[agent_index].state_time += self.dt
-
-            if (self.population[agent_index].state_max_time
-                and self.population[agent_index].state_time == \
-                    self.population[agent_index].state_max_time
-                ):
-
-                # Verify: becomes into ? ... Throw the dice
-                dice = np.random.random_sample()
-
-                cummulative_probability = 0
-
-                # OJO con SORTED
-                for (probability, becomes_into_state) in zip(
-                    self.disease_states_transitions_by_vulnerability_group[
-                        self.population[agent_index].group
-                        ][self.population[agent_index].state]['transition_probability'],
-                    self.disease_states_transitions_by_vulnerability_group[
-                        self.population[agent_index].group
-                        ][self.population[agent_index].state]['becomes_into']
-                    ):
-                    cummulative_probability += probability
-
-                    if dice <= cummulative_probability:
-                        
-                        self.population[agent_index].state = becomes_into_state
-                        
-                        self.population[
-                            agent_index
-                            ].update_diagnosis_state(self.step, changed_state=True)
-
-                        self.population[agent_index].state_time = 0
-
-                        if self.disease_states_time_functions[
-                            self.population[agent_index].group
-                            ][becomes_into_state]['time_function']:
-
-                            self.population[
-                                agent_index
-                                ].state_max_time = \
-                                self.disease_states_time_functions[
-                                self.population[agent_index].group
-                                ][becomes_into_state]['time_function']()
-
-                        else:
-                            self.population[agent_index].state_max_time = None
-                        
-                        break
 
 
     def spatial_tress_by_state(self):
@@ -412,20 +337,11 @@ class BasicPopulation:
 
                             self.population[
                                 agent_index
-                                ].update_diagnosis_state(self.step, changed_state=True)
+                                ].update_diagnosis_state(self.step, the_state_changed=True)
 
                             self.population[agent_index].state_time = 0
 
-                            if self.disease_states_time_functions[
-                                self.population[agent_index].group
-                                ][becomes_into_state]['time_function']:
-
-                                self.population[agent_index].state_max_time = \
-                                    self.disease_states_time_functions[
-                                        self.population[agent_index].group
-                                        ][becomes_into_state]['time_function']()
-                            else:
-                                self.population[agent_index].state_max_time = None
+                            self.population[agent_index].determine_state_time()
 
                             break
 
@@ -494,10 +410,10 @@ class BasicPopulation:
                         if len(avoidable_indices_inside_radius) is not 0:
                             
                             for avoidable_agent_index in avoidable_indices_inside_radius:
-                                
+
                                 # Must agent be alert ? ... Throw the dice
                                 dice = np.random.random_sample()
-                                
+
                                 # Note that alertness depends on a probability,
                                 # which tries to model the probability that an
                                 # agent with a defined group and state is alert
@@ -505,10 +421,10 @@ class BasicPopulation:
                                     self.population[agent_index].group
                                     ][self.population[agent_index].state]['alertness_probability']
                                     ):
-                                    
+
                                     # Agent is alerted !!!
                                     self.population[agent_index].alertness = True
-                                    
+
                                     # Append avoidable_agent_index in alerted_by
                                     self.population[agent_index].alerted_by.append(
                                         avoidable_agent_index
@@ -517,7 +433,16 @@ class BasicPopulation:
                 #=============================================
                 # Change movement direction if agent's alertness = True
                 if self.population[agent_index].alertness:
-                    
+
+                    # Retrieve positions of the agents to be avoided
+                    positions_to_avoid = [
+                        np.array(
+                            [self.population[agent_to_be_avoided].x,
+                            self.population[agent_to_be_avoided].y]
+                            )
+                        for agent_to_be_avoided in self.population[agent_index].alerted_by
+                        ]
+
                     # Retrieve velocities of the agents to be avoided
                     velocities_to_avoid = [
                         np.array(
@@ -528,7 +453,10 @@ class BasicPopulation:
                         ]
 
                     # Change movement direction
-                    self.population[agent_index].alert_avoid_agents(velocities_to_avoid)
+                    self.population[agent_index].alert_avoid_agents(
+                        positions_to_avoid,
+                        velocities_to_avoid
+                        )
 
     
     def populate_df(self, agent_dict: dict=None):
@@ -539,7 +467,7 @@ class BasicPopulation:
             population_array = []
             
             for agent_index in self.population.keys():
-                agent_dict = self.population[agent_index].__dict__
+                agent_dict = self.population[agent_index].getstate()
                 agent_dict['step'] = self.step
                 
                 population_array.append(agent_dict)
