@@ -55,7 +55,7 @@ def time_function_3():
 
 dim = 2
 
-population_number = 100
+population_number = 1000
 
 vulnerable_population_pct = 0.2
 
@@ -1777,7 +1777,7 @@ if __name__ == "__main__":
 
     agents.plot_current_locations()
 
-    agents.animate_population()
+    #agents.animate_population()
 
     agents_times_series_plot(agents.agents_info_df)
 
