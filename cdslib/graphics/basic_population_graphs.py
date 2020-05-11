@@ -12,7 +12,8 @@ class BasicPopulationGraphs:
         dead_color_dict: dict,
         vulnerability_groups_markers: dict,
         disease_states_markers_colors: dict,
-        disease_states_line_colors: dict
+        disease_states_line_colors: dict,
+        max_length_in_px: float
         ):
         """
         """
@@ -22,6 +23,16 @@ class BasicPopulationGraphs:
         self.xmax = basic_population.xmax
         self.ymin = basic_population.ymin
         self.ymax = basic_population.ymax
+
+        # Max length
+        max_length = (self.xmax - self.xmin) \
+            if (self.xmax - self.xmin) > (self.ymax - self.ymin) \
+            else (self.ymax - self.ymin)
+
+        self.max_length_in_px = max_length_in_px
+
+        self.width = self.max_length_in_px * (self.xmax - self.xmin)/max_length
+        self.height = self.max_length_in_px * (self.ymax - self.ymin)/max_length
 
         self.agent_marker_line_width = \
             agent_marker_line_width
@@ -42,7 +53,10 @@ class BasicPopulationGraphs:
             disease_states_line_colors
 
 
-    def go_agent_scatter(self, agent_dict: dict):
+    def go_agent_scatter(
+        self,
+        agent_dict: dict
+        ):
         """
         """
         live_state = agent_dict['live_state']
@@ -52,10 +66,13 @@ class BasicPopulationGraphs:
         y = agent_dict['y']
         vx = agent_dict['vx']
         vy = agent_dict['vy']
-        group = agent_dict['group']
-        state = agent_dict['state']
+        vulnerability_group = agent_dict['vulnerability_group']
+        disease_state = agent_dict['disease_state']
         diagnosed = agent_dict['diagnosed']
         infected_by = agent_dict['infected_by']
+        infected_in_step = agent_dict['infected_in_step']
+        contacted_with = agent_dict['contacted_with']
+        alerted_by = agent_dict['alerted_by']
 
         if live_state == 'alive':
 
@@ -66,13 +83,19 @@ class BasicPopulationGraphs:
                 '<br>'
                 f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
                 '<br>'
-                f'<b>Group</b>: {group}'
+                f'<b>Vulnerability group</b>: {vulnerability_group}'
                 '<br>'
-                f'<b>State</b>: {state}'
+                f'<b>Disease state</b>: {disease_state}'
                 '<br>'
                 f'<b>Diagnosed</b>: {diagnosed}'
                 '<br>'
                 f'<b>Infected by</b>: {infected_by}'
+                '<br>'
+                f'<b>Infected in step</b>: {infected_in_step:d}'
+                '<br>'
+                f'<b>Contacted with</b>: {contacted_with}'
+                '<br>'
+                f'<b>Alerted by</b>: {alerted_by}'
                 )
 
             return go.Scatter(
@@ -80,8 +103,8 @@ class BasicPopulationGraphs:
                 y=[y],
                 mode='markers',
                 marker_line_width=self.agent_marker_line_width,
-                marker_symbol=self.vulnerability_groups_markers[group],
-                marker=self.disease_states_markers_colors[state],
+                marker_symbol=self.vulnerability_groups_markers[vulnerability_group],
+                marker=self.disease_states_markers_colors[disease_state],
                 text=template,
                 hoverinfo='text'
                 )
@@ -93,9 +116,9 @@ class BasicPopulationGraphs:
                 '<br>'
                 f'<b>Position</b>: ({x:.2f}, {y:.2f})'
                 '<br>'
-                f'<b>Group</b>: {group}'
+                f'<b>Vulnerability group</b>: {vulnerability_group}'
                 '<br>'
-                f'<b>State</b>: {state}'
+                f'<b>Disease state</b>: {disease_state}'
                 '<br>'
                 f'<b>Live state</b>: {live_state}'
                 )
@@ -119,9 +142,9 @@ class BasicPopulationGraphs:
                 '<br>'
                 f'<b>Position</b>: ({x:.2f}, {y:.2f})'
                 '<br>'
-                f'<b>Group</b>: {group}'
+                f'<b>Vulnerability group</b>: {vulnerability_group}'
                 '<br>'
-                f'<b>State</b>: {state}'
+                f'<b>Disease state</b>: {disease_state}'
                 '<br>'
                 f'<b>Live state</b>: {live_state}'
                 )
@@ -138,20 +161,33 @@ class BasicPopulationGraphs:
                 )
 
 
-    def plot_current_locations(self):
+    def plot_locations(
+        self,
+        step: int
+        ):
         """
         """
         fig = go.Figure(
             layout=go.Layout(
-                xaxis=dict(range=[self.xmin, self.xmax], autorange=False, zeroline=False),
-                yaxis=dict(range=[self.ymin, self.ymax], autorange=False, zeroline=False),
+                width=self.width, 
+                height=self.height,
+                xaxis=dict(
+                    range=[self.xmin, self.xmax],
+                    autorange=False,
+                    zeroline=False
+                    ),
+                yaxis=dict(
+                    range=[self.ymin, self.ymax],
+                    autorange=False,
+                    zeroline=False
+                    ),
                 title_text='Current Population Locations',
                 hovermode='closest'
                 )
             )
 
         population_data = self.agents_info_df.loc[
-            self.agents_info_df['step'] == self.step
+            self.agents_info_df['step'] == step
             ].sort_values(by=['agent']).to_dict(orient='records')
 
         # Cycle runs along all agents in current population
@@ -165,7 +201,8 @@ class BasicPopulationGraphs:
 
         fig.show()
 
-
+    # TODO
+    # Change velocity, frames, menu, axis labels
     def animate_population(self):
         """
         """
@@ -206,20 +243,15 @@ class BasicPopulationGraphs:
                 [self.go_agent_scatter(population_data[i])
                 for i in range(len(population_data))]
                 )
-        
-        # Max length
-        max_length = (self.xmax - self.xmin) \
-            if (self.xmax - self.xmin) > (self.ymax - self.ymin) \
-            else (self.ymax - self.ymin)
-        
+
         # Create figure
         fig = go.Figure(
             
             data=full_data[0],
             
             layout=go.Layout(
-                width=600 * (self.xmax - self.xmin)/max_length, 
-                height=600 * (self.ymax - self.ymin)/max_length,
+                width=self.height, 
+                height=self.width,
                 xaxis=dict(
                     range=[self.xmin, self.xmax],
                     autorange=False,
@@ -293,8 +325,8 @@ class BasicPopulationGraphs:
 
             df = agents_dataframe.loc[
                 agents_dataframe['live_state'] == 'alive' 
-                ][['step', 'agent', 'state']].groupby(
-                    ['step', 'state'],
+                ][['step', 'agent', 'disease_state']].groupby(
+                    ['step', 'disease_state'],
                     as_index=False
                     ).count().copy()
 
@@ -303,13 +335,13 @@ class BasicPopulationGraphs:
                 inplace=True
                 )
             
-            states = agents_dataframe['state'].unique()
+            states = agents_dataframe['disease_state'].unique()
             
             fig = go.Figure()
             
             for state in states:
                 subdf = df.loc[
-                    df['state'] == state
+                    df['disease_state'] == state
                 ][['step', 'agents']].copy()
 
                 # Add traces
@@ -330,7 +362,9 @@ class BasicPopulationGraphs:
         if mode == 'infection':
             infection_df = agents_dataframe.copy()
 
-            infection_df['infection_state'] = func(infection_df['state'].to_list())
+            infection_df['infection_state'] = func(
+                infection_df['disease_state'].to_list()
+                )
 
             df = infection_df.loc[
                 infection_df['live_state'] == 'alive' 

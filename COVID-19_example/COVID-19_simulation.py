@@ -8,53 +8,36 @@ from cdslib import BasicPopulation
 from cdslib import BasicPopulationGraphs
 
 def time_function_1():
-    Lambda = 5
-    return np.random.poisson(Lambda, 1)[0]
+    Lambda = 5*6
+    t = np.random.poisson(Lambda, 1)[0]
+    return t if t < 21*6 else 21*6
 
 def time_function_2():
-    mu = 15
-    sigma = 10
-    return np.random.normal(mu, sigma, 1)[0]
+    Lambda = 10*6
+    t = np.random.poisson(Lambda, 1)[0]
+    return t if t < 20*6 else 20*6
 
 def time_function_3():
-    Lambda = 10
-    return np.random.poisson(Lambda, 1)[0]
+    Lambda = 14*6
+    t = np.random.poisson(Lambda, 1)[0]
+    return t if t < 20*6 else 20*6
 
-def initial_population_group_state_scene(
-    population_number,
-    vulnerable_number
-    ):
-    population_group_list = [
-        vulnerability_groups[1] if i < vulnerable_number else vulnerability_groups[0]
-        for i in range(population_number)
-    ]
-    population_state_list = [
-        disease_states[1] if i%3 == 0 else disease_states[0]
-        for i in range(population_number)
-    ]
-    
-    return population_group_list, population_state_list
+def time_function_4():
+    Lambda = 21*6
+    t = np.random.poisson(Lambda, 1)[0]
+    return t if t < 42*6 else 42*6
+
+def time_function_5():
+    Lambda = 10*6
+    t = np.random.poisson(Lambda, 1)[0]
+    return t if t < 15*6 else 15*6
 
 if __name__ == "__main__":
-
-    population_number = 100
-
-    vulnerable_population_pct = 0.2
-
-    vulnerable_number = np.ceil(population_number * vulnerable_population_pct)
-
-    horizontal_length = 100
-
-    vertical_length = 100
-
-    maximum_speed = 1.0 
-
-    maximum_free_random_speed = 0.5
 
     dt_scale_in_years = 0.000685 # 1/4 of day in years
 
     #===========================================================================
-    # Information needed for Agents_info class
+    # Information needed for AgentsInfo class
 
     disease_states = [
         'susceptible',
@@ -62,7 +45,14 @@ if __name__ == "__main__":
         'asymptomatic',
         'mildly-ill',
         'seriously-ill',
-        'recovered'
+        'recovered',
+        'inmune',
+        'dead'
+        ]
+
+    susceptibility_groups = [
+        'mildly-susceptible',
+        'highly-susceptible'
         ]
 
     vulnerability_groups = [
@@ -83,13 +73,19 @@ if __name__ == "__main__":
                     'time_function': time_function_2
                     },
                 'mildly-ill': {
-                    'time_function': time_function_2
+                    'time_function': time_function_3
                     },
                 'seriously-ill': {
-                    'time_function': time_function_2
+                    'time_function': time_function_4
                     },
                 'recovered': {
-                    'time_function': time_function_3
+                    'time_function': time_function_5
+                    },
+                'inmune': {
+                    'time_function': None
+                    },
+                'dead': {
+                    'time_function': None
                     }
                 },
             'vulnerable': {
@@ -103,15 +99,31 @@ if __name__ == "__main__":
                     'time_function': time_function_2
                     },
                 'mildly-ill': {
-                    'time_function': time_function_2
+                    'time_function': time_function_3
                     },
                 'seriously-ill': {
-                    'time_function': time_function_2
+                    'time_function': time_function_4
                     },
                 'recovered': {
-                    'time_function': time_function_3
+                    'time_function': time_function_5
+                    },
+                'inmune': {
+                    'time_function': None
+                    },
+                'dead': {
+                    'time_function': None
                     }
                 }
+            },
+        'criticality_level_of_evolution_of_disease_states': {
+            'inmune': 0,
+            'susceptible': 0,
+            'exposed': 1,
+            'asymptomatic': 2,
+            'recovered': 2,
+            'mildly-ill': 3,
+            'seriously-ill': 4,
+            'dead': 5
             },
         'disease_states_transitions_by_vulnerability_group': {
             'not-vulnerable': {
@@ -124,7 +136,7 @@ if __name__ == "__main__":
                     'transition_probability': [0.60, 0.25, 0.15]
                     },
                 'asymptomatic': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'becomes_into': ['inmune', 'mildly-ill', 'seriously-ill'],
                     'transition_probability': [0.75, 0.20, 0.05]
                     },
                 'mildly-ill': {
@@ -132,12 +144,20 @@ if __name__ == "__main__":
                     'transition_probability': [0.20, 0.80]
                     },
                 'seriously-ill': {
-                    'becomes_into': ['recovered'],
-                    'transition_probability': [0.95]
+                    'becomes_into': ['recovered', 'dead'],
+                    'transition_probability': [0.95, 0.05]
                     },
                 'recovered': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.90, 0.07, 0.03]
+                    'becomes_into': ['mildly-ill', 'seriously-ill', 'inmune'],
+                    'transition_probability': [0.07, 0.03, 0.90]
+                    },
+                'inmune': {
+                    'becomes_into': None,
+                    'transition_probability': None
+                    },
+                'dead': {
+                    'becomes_into': None,
+                    'transition_probability': None
                     }
                 },
             'vulnerable': {
@@ -150,7 +170,7 @@ if __name__ == "__main__":
                     'transition_probability': [0.15, 0.25, 0.60]
                     },
                 'asymptomatic': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
+                    'becomes_into': ['inmune', 'mildly-ill', 'seriously-ill'],
                     'transition_probability': [0.05, 0.20, 0.75]
                     },
                 'mildly-ill': {
@@ -158,275 +178,39 @@ if __name__ == "__main__":
                     'transition_probability': [0.80, 0.20]
                     },
                 'seriously-ill': {
-                    'becomes_into': ['recovered'],
-                    'transition_probability': [0.20]
+                    'becomes_into': ['recovered', 'dead'],
+                    'transition_probability': [0.20, 0.80]
                     },
                 'recovered': {
-                    'becomes_into': ['susceptible', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.70, 0.15, 0.15]
+                    'becomes_into': ['mildly-ill', 'seriously-ill', 'inmune'],
+                    'transition_probability': [0.15, 0.15, 0.70]
+                    },
+                'inmune': {
+                    'becomes_into': None,
+                    'transition_probability': None
+                    },
+                'dead': {
+                    'becomes_into': None,
+                    'transition_probability': None
                     }
                 }
             }
         }
-
-    population_age_groups_info = {
-        'child': {
-            'min_age': 0,
-            'max_age': 9,
-            'mortality_probability': 0.003
-            },
-        'teenager': {
-            'min_age': 10,
-            'max_age': 19,
-            'mortality_probability': 0.002
-            },
-        'vicenarian': {
-            'min_age': 20,
-            'max_age': 29,
-            'mortality_probability': 0.002
-            },
-        'tricenarian': {
-            'min_age': 30,
-            'max_age': 39,
-            'mortality_probability': 0.004
-            },
-        'quadragenarian': {
-            'min_age': 40,
-            'max_age': 49,
-            'mortality_probability': 0.004
-            },
-        'quinquagenarian': {
-            'min_age': 50,
-            'max_age': 59,
-            'mortality_probability': 0.006
-            },
-        'sexagenarian': {
-            'min_age': 60,
-            'max_age': 69,
-            'mortality_probability': 0.010
-            },
-        'septuagenarian': {
-            'min_age': 70,
-            'max_age': 79,
-            'mortality_probability': 0.040
-            },
-        'octogenarian': {
-            'min_age': 80,
-            'max_age': 89,
-            'mortality_probability': 0.070
-            },
-        'nonagenarian': {
-            'min_age': 90,
-            'max_age': 99,
-            'mortality_probability': 0.095
-            },
-        'centenarian': {
-            'min_age': 100,
-            'max_age': 200,
-            'mortality_probability': 0.095
-            }
-        }
-
-    mortality_of_disease_states_by_vulnerability_group = {
-            'not-vulnerable': {
-                'susceptible': {
-                    'mortality_probability': None
-                    },
-                'exposed': {
-                    'mortality_probability': None
-                    },
-                'asymptomatic': {
-                    'mortality_probability': None
-                    },
-                'mildly-ill': {
-                    'mortality_probability': None
-                    },
-                'seriously-ill': {
-                    'mortality_probability': 0.10
-                    },
-                'recovered': {
-                    'mortality_probability': None
-                    }
-                },
-            'vulnerable': {
-                'susceptible': {
-                    'mortality_probability': None
-                    },
-                'exposed': {
-                    'mortality_probability': None
-                    },
-                'asymptomatic': {
-                    'mortality_probability': None
-                    },
-                'mildly-ill': {
-                    'mortality_probability': None
-                    },
-                'seriously-ill': {
-                    'mortality_probability': 0.90
-                    },
-                'recovered': {
-                    'mortality_probability': None
-                    }
-                }
-            }
-
-    # Here we are trying to model the probability that any agent is taken into
-    # account for diagnosis according to its state and vulnerability group
-    diagnosis_of_disease_states_by_vulnerability_group = {
-            'not-vulnerable': {
-                'susceptible': {
-                    'can_be_diagnosed': False,
-                    'diagnosis_time': None,
-                    'diagnosis_probability': None
-                    },
-                'exposed': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 5,
-                    'diagnosis_probability': 0.20
-                    },
-                'asymptomatic': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 5,
-                    'diagnosis_probability': 0.20
-                    },
-                'mildly-ill': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 5,
-                    'diagnosis_probability': 0.10
-                    },
-                'seriously-ill': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 2,
-                    'diagnosis_probability': 0.95
-                    },
-                'recovered': {
-                    'can_be_diagnosed': False,
-                    'diagnosis_time': None,
-                    'diagnosis_probability': None
-                    }
-                },
-            'vulnerable': {
-                'susceptible': {
-                    'can_be_diagnosed': False,
-                    'diagnosis_time': None,
-                    'diagnosis_probability': None
-                    },
-                'exposed': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 3,
-                    'diagnosis_probability': 0.40
-                    },
-                'asymptomatic': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 3,
-                    'diagnosis_probability': 0.40
-                    },
-                'mildly-ill': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 3,
-                    'diagnosis_probability': 0.20
-                    },
-                'seriously-ill': {
-                    'can_be_diagnosed': True,
-                    'diagnosis_time': 2,
-                    'diagnosis_probability': 0.95
-                    },
-                'recovered': {
-                    'can_be_diagnosed': False,
-                    'diagnosis_time': None,
-                    'diagnosis_probability': None
-                    }
-                }
-            }
-
-    hospitalization_of_disease_states_by_vulnerability_group = {
-            'not-vulnerable': {
-                'susceptible': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'exposed': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'asymptomatic': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'mildly-ill': {
-                    'can_be_hospitalized': True,
-                    'hospitalization_probability': 0.05,
-                    'UCI_probability': 0.0
-                    },
-                'seriously-ill': {
-                    'can_be_hospitalized': True,
-                    'hospitalization_probability': 1.0,
-                    'UCI_probability': 0.10
-                    },
-                'recovered': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    }
-                },
-            'vulnerable': {
-                'susceptible': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'exposed': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'asymptomatic': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    },
-                'mildly-ill': {
-                    'can_be_hospitalized': True,
-                    'hospitalization_probability': 0.30,
-                    'UCI_probability': 0.0
-                    },
-                'seriously-ill': {
-                    'can_be_hospitalized': True,
-                    'hospitalization_probability': 1.0,
-                    'UCI_probability': 0.50
-                    },
-                'recovered': {
-                    'can_be_hospitalized': False,
-                    'hospitalization_probability': None,
-                    'UCI_probability': None
-                    }
-                }
-            }
-
-    agents_info = AgentsInfo(
-        disease_states=disease_states,
-        vulnerability_groups=vulnerability_groups,
-        dynamics_of_the_disease_states_transitions_info= \
-            dynamics_of_the_disease_states_transitions_info,
-        population_age_groups_info=population_age_groups_info,
-        mortality_of_disease_states_by_vulnerability_group= \
-            mortality_of_disease_states_by_vulnerability_group,
-        diagnosis_of_disease_states_by_vulnerability_group= \
-            diagnosis_of_disease_states_by_vulnerability_group,
-        hospitalization_of_disease_states_by_vulnerability_group= \
-            hospitalization_of_disease_states_by_vulnerability_group
-    )
-
-    #===========================================================================
-    # Information needed for BasicPopulation class
 
     contagion_dynamics_info = {
         'contagion_probabilities_by_susceptibility_groups': {
-            'not-vulnerable': 0.5,
-            'vulnerable': 0.9
+            'mildly-susceptible': 0.5,
+            'highly-susceptible': 0.9
+            },
+        'criticality_level_of_disease_states_to_susceptibility_to_contagion': {
+            'inmune': 0,
+            'susceptible': 0,
+            'exposed': 1,
+            'asymptomatic': 0,
+            'recovered': 0,
+            'mildly-ill': 0,
+            'seriously-ill': 0,
+            'dead': 0
             },
         'disease_states_transitions_by_contagion': {
             'susceptible': {
@@ -452,48 +236,291 @@ if __name__ == "__main__":
             'recovered': {
                 'becomes_into': None,
                 'transition_probability': None
+                },
+            'inmune': {
+                'becomes_into': None,
+                'transition_probability': None
+                },
+            'dead': {
+                'becomes_into': None,
+                'transition_probability': None
                 }
             },
         'dynamics_of_disease_states_contagion': {
             'susceptible': {
                 'can_get_infected': True,
+                'is_infected': False,
                 'can_spread': False,
                 'spread_radius': None,
                 'spread_probability': None
                 },
             'exposed': {
                 'can_get_infected': False,
+                'is_infected': True,
                 'can_spread': True,
                 'spread_radius': 3.0,
                 'spread_probability': 0.4
                 },
             'asymptomatic': {
                 'can_get_infected': False,
+                'is_infected': True,
                 'can_spread': True,
                 'spread_radius': 3.0,
                 'spread_probability': 0.6
                 },
             'mildly-ill': {
                 'can_get_infected': False,
+                'is_infected': True,
                 'can_spread': True,
                 'spread_radius': 3.0,
                 'spread_probability': 0.8
                 },
             'seriously-ill': {
                 'can_get_infected': False,
+                'is_infected': True,
                 'can_spread': True,
                 'spread_radius': 3.0,
                 'spread_probability': 0.8
                 },
             'recovered': {
                 'can_get_infected': False,
+                'is_infected': True,
                 'can_spread': True,
                 'spread_radius': 3.0,
                 'spread_probability': 0.4
+                },
+            'inmune': {
+                'can_get_infected': False,
+                'is_infected': False,
+                'can_spread': False,
+                'spread_radius': None,
+                'spread_probability': None
+                },
+            'dead': {
+                'can_get_infected': False,
+                'is_infected': False,
+                'can_spread': False,
+                'spread_radius': None,
+                'spread_probability': None
                 }
             },
-        'inmunization_level_info': {
+        'inmunization_level_by_vulnerability_group': {
+                'not-vulnerable': 1.0,
+                'vulnerable': 0.5
+            }
+        }
 
+    population_age_groups_info = {
+        'child': {
+            'min_age': 0,
+            'max_age': 9,
+            'mortality_probability': dt_scale_in_years* 1.7/1000.
+            },
+        'teenager': {
+            'min_age': 10,
+            'max_age': 19,
+            'mortality_probability': dt_scale_in_years* 1.4/1000.
+            },
+        'vicenarian': {
+            'min_age': 20,
+            'max_age': 29,
+            'mortality_probability': dt_scale_in_years* 3.4/1000.
+            },
+        'tricenarian': {
+            'min_age': 30,
+            'max_age': 39,
+            'mortality_probability': dt_scale_in_years* 3.1/1000.
+            },
+        'quadragenarian': {
+            'min_age': 40,
+            'max_age': 49,
+            'mortality_probability': dt_scale_in_years* 3.7/1000.
+            },
+        'quinquagenarian': {
+            'min_age': 50,
+            'max_age': 59,
+            'mortality_probability': dt_scale_in_years* 7.2/1000.
+            },
+        'sexagenarian': {
+            'min_age': 60,
+            'max_age': None,
+            'mortality_probability': dt_scale_in_years* 40.9/1000.
+            }
+        }
+
+    # Here we are trying to model the probability that any agent is taken into
+    # account for diagnosis according to its state and vulnerability group
+    diagnosis_of_disease_states_by_vulnerability_group = {
+        'not-vulnerable': {
+            'susceptible': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'exposed': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 5*6,
+                'diagnosis_probability': 0.20
+                },
+            'asymptomatic': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 5*6,
+                'diagnosis_probability': 0.20
+                },
+            'mildly-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 5*6,
+                'diagnosis_probability': 0.10
+                },
+            'seriously-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 2*6,
+                'diagnosis_probability': 0.95
+                },
+            'recovered': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'inmune': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'dead': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                }
+            },
+        'vulnerable': {
+            'susceptible': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'exposed': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 3*6,
+                'diagnosis_probability': 0.40
+                },
+            'asymptomatic': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 3*6,
+                'diagnosis_probability': 0.40
+                },
+            'mildly-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 3*6,
+                'diagnosis_probability': 0.20
+                },
+            'seriously-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 2*6,
+                'diagnosis_probability': 0.95
+                },
+            'recovered': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'inmune': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                },
+            'dead': {
+                'can_be_diagnosed': False,
+                'diagnosis_time': None,
+                'diagnosis_probability': None
+                }
+            }
+        }
+
+    hospitalization_of_disease_states_by_vulnerability_group = {
+        'not-vulnerable': {
+            'susceptible': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'exposed': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'asymptomatic': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'mildly-ill': {
+                'can_be_hospitalized': True,
+                'hospitalization_probability': 0.05,
+                'UCI_probability': 0.0
+                },
+            'seriously-ill': {
+                'can_be_hospitalized': True,
+                'hospitalization_probability': 1.0,
+                'UCI_probability': 0.10
+                },
+            'recovered': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'inmune': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'dead': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                }
+            },
+        'vulnerable': {
+            'susceptible': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'exposed': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'asymptomatic': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'mildly-ill': {
+                'can_be_hospitalized': True,
+                'hospitalization_probability': 0.30,
+                'UCI_probability': 0.0
+                },
+            'seriously-ill': {
+                'can_be_hospitalized': True,
+                'hospitalization_probability': 1.0,
+                'UCI_probability': 0.50
+                },
+            'recovered': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'inmune': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                },
+            'dead': {
+                'can_be_hospitalized': False,
+                'hospitalization_probability': None,
+                'UCI_probability': None
+                }
             }
         }
 
@@ -527,6 +554,14 @@ if __name__ == "__main__":
                 'recovered': {
                     'should_be_alert': True,
                     'alertness_probability': 0.80
+                    },
+                'inmune': {
+                    'should_be_alert': False,
+                    'alertness_probability': None
+                    },
+                'dead': {
+                    'should_be_alert': False,
+                    'alertness_probability': None
                     }
                 },
             'vulnerable': {
@@ -553,6 +588,14 @@ if __name__ == "__main__":
                 'recovered': {
                     'should_be_alert': True,
                     'alertness_probability': 1.0
+                    },
+                'inmune': {
+                    'should_be_alert': False,
+                    'alertness_probability': None
+                    },
+                'dead': {
+                    'should_be_alert': False,
+                    'alertness_probability': None
                     }
                 }
             },
@@ -585,6 +628,14 @@ if __name__ == "__main__":
                 'recovered': {
                     'avoidable_agent': False,
                     'avoidness_radius': None
+                    },
+                'inmune': {
+                    'avoidable_agent': False,
+                    'avoidness_radius': None
+                    },
+                'dead': {
+                    'avoidable_agent': False,
+                    'avoidness_radius': None
                     }
                 },
             'vulnerable': {
@@ -611,35 +662,323 @@ if __name__ == "__main__":
                 'recovered': {
                     'avoidable_agent': True,
                     'avoidness_radius': 1.0
+                    },
+                'inmune': {
+                    'avoidable_agent': False,
+                    'avoidness_radius': None
+                    },
+                'dead': {
+                    'avoidable_agent': False,
+                    'avoidness_radius': None
                     }
                 }
             }
         }
 
-    basic_population = BasicPopulation(
+    agents_info = AgentsInfo(
         disease_states=disease_states,
+        susceptibility_groups=susceptibility_groups,
         vulnerability_groups=vulnerability_groups,
+        dynamics_of_the_disease_states_transitions_info= \
+            dynamics_of_the_disease_states_transitions_info,
         contagion_dynamics_info=contagion_dynamics_info,
+        population_age_groups_info=population_age_groups_info,
+        diagnosis_of_disease_states_by_vulnerability_group= \
+            diagnosis_of_disease_states_by_vulnerability_group,
+        hospitalization_of_disease_states_by_vulnerability_group= \
+            hospitalization_of_disease_states_by_vulnerability_group,
         social_distancing_info=social_distancing_info
         )
 
-    population_group_list, population_state_list = initial_population_group_state_scene(
-        population_number,
-        vulnerable_number
+    #===========================================================================
+    # Information needed for BasicPopulation class
+
+    initial_population_number = 1000
+
+    age_group_list = [
+        'child',
+        'teenager',
+        'vicenarian',
+        'tricenarian',
+        'quadragenarian',
+        'quinquagenarian',
+        'sexagenarian',
+        ]
+
+    initial_population_age_distribution = {
+        'child': 0.10,
+        'teenager': 0.15,
+        'vicenarian': 0.20,
+        'tricenarian': 0.25,
+        'quadragenarian': 0.15,
+        'quinquagenarian': 0.10,
+        'sexagenarian': 0.05
+        }
+
+    initial_population_distributions = {
+        'age_group/susceptibility_group': {
+            'child': {
+                'mildly-susceptible': 0.80,
+                'highly-susceptible': 0.20,
+                },
+            'teenager': {
+                'mildly-susceptible': 0.50,
+                'highly-susceptible': 0.50,
+                },
+            'vicenarian': {
+                'mildly-susceptible': 0.10,
+                'highly-susceptible': 0.90,
+                },
+            'tricenarian': {
+                'mildly-susceptible': 0.10,
+                'highly-susceptible': 0.90,
+                },
+            'quadragenarian': {
+                'mildly-susceptible': 0.10,
+                'highly-susceptible': 0.90,
+                },
+            'quinquagenarian': {
+                'mildly-susceptible': 0.10,
+                'highly-susceptible': 0.90,
+                },
+            'sexagenarian': {
+                'mildly-susceptible': 0.10,
+                'highly-susceptible': 0.90,
+                },
+            },
+        'age_group/vulnerability_group': {
+            'child': {
+                'not-vulnerable': 0.99,
+                'vulnerable': 0.01
+                },
+            'teenager': {
+                'not-vulnerable': 0.98,
+                'vulnerable': 0.02
+                },
+            'vicenarian': {
+                'not-vulnerable': 0.95,
+                'vulnerable': 0.05
+                },
+            'tricenarian': {
+                'not-vulnerable': 0.90,
+                'vulnerable': 0.10
+                },
+            'quadragenarian': {
+                'not-vulnerable': 0.80,
+                'vulnerable': 0.20
+                },
+            'quinquagenarian': {
+                'not-vulnerable': 0.80,
+                'vulnerable': 0.20
+                },
+            'sexagenarian': {
+                'not-vulnerable': 0.75,
+                'vulnerable': 0.25
+                },
+            },
+        'age_group/vulnerability_group/disease_state': {
+            'child': {
+                'not-vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'teenager': {
+                'not-vulnerable': {
+                    'susceptible': 0.90,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 0.90,
+                    'exposed': 0.10,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'vicenarian': {
+                'not-vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'tricenarian': {
+                'not-vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'seriously-ill': 0.00,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'quadragenarian': {
+                'not-vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'quinquagenarian': {
+                'not-vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                },
+            'sexagenarian': {
+                'not-vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    },
+                'vulnerable': {
+                    'susceptible': 0.80,
+                    'exposed': 0.00,
+                    'asymptomatic': 0.10,
+                    'mildly-ill': 0.05,
+                    'seriously-ill': 0.05,
+                    'recovered': 0.00,
+                    'inmune': 0.00,
+                    'dead': 0.00
+                    }
+                }
+            },
+        'inmunization_level': {
+            0.00: 1.00,
+            1.00: 0.00
+            }
+        }
+
+    basic_population = BasicPopulation(
+        age_group_list=age_group_list,
+        susceptibility_group_list=susceptibility_groups,
+        vulnerability_group_list=vulnerability_groups,
+        disease_state_list=disease_states,
+        population_age_groups_info=population_age_groups_info,
+        initial_population_number=initial_population_number,
+        initial_population_age_distribution=initial_population_age_distribution,
+        initial_population_distributions=initial_population_distributions
         )
+
+    #===========================================================================
+    # Create population
+
+    horizontal_length = 100
+
+    vertical_length = 100
+
+    maximum_speed = 1.0 
+
+    maximum_free_random_speed = 0.5
 
     basic_population.create_population(
         agents_info=agents_info,
-        population_number=population_number,
-        vulnerable_number=vulnerable_number,
-        population_group_list=population_group_list,
-        population_state_list=population_state_list,
         horizontal_length=horizontal_length,
         vertical_length=vertical_length,
         maximum_speed=maximum_speed,
         maximum_free_random_speed=maximum_free_random_speed,
         dt_scale_in_years=dt_scale_in_years
         )
+
+    #===========================================================================
+    # Evolve population
+    start_time = time.time()
+
+    for i in range(300):
+        basic_population.evolve_population()
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
     
     #===========================================================================
     # Information needed for graphing
@@ -653,9 +992,9 @@ if __name__ == "__main__":
     # Markers for dead agents
     natural_death = 'hash'
     dead_by_disease = 'x-thin'
-    dead_color = px.colors.qualitative.Dark24[5]
+    natural_dead_color = px.colors.qualitative.Dark24[5]
     dead_color_dict = dict(
-        color=dead_color,
+        color=natural_dead_color,
         size=agent_size,
         opacity=agent_opacity
         )
@@ -665,13 +1004,14 @@ if __name__ == "__main__":
     vulnerable_marker = 'star-diamond'
 
     # State colors
-    dark_green = px.colors.qualitative.D3[2]   # susceptible
-    dark_blue = px.colors.qualitative.D3[0]    # incubator
-    dark_red = px.colors.qualitative.D3[3]     # seriously-ill
-    dark_orange = px.colors.qualitative.D3[1]  # mildly-ill
-    dark_purple = px.colors.qualitative.G10[4] # asymptomatic
-    dark_gray = px.colors.qualitative.D3[7]    # recovered
-    dark_brown = px.colors.qualitative.D3[5]   # allegedly-recovered
+    susceptible_color = px.colors.qualitative.D3[2]   # dark_green
+    exposed_color = px.colors.qualitative.D3[0]    # dark_blue
+    asymptomatic_color = px.colors.qualitative.D3[3]     # dark_red
+    mildly_ill_color = px.colors.qualitative.D3[1]  # dark_orange
+    seriously_ill_color = px.colors.qualitative.G10[4] # dark_purple
+    recovered_color = px.colors.qualitative.D3[7]    # dark_gray
+    inmune_color = px.colors.qualitative.Dark2[5]   # dark yellow
+    dead_color = px.colors.qualitative.D3[5]   # dark_brown
 
     vulnerability_groups_markers = {
         'not-vulnerable': not_vulnerable_marker,
@@ -680,32 +1020,42 @@ if __name__ == "__main__":
 
     disease_states_markers_colors = {
         'susceptible': dict(
-            color=dark_green,
+            color=susceptible_color,
             size=agent_size,
             opacity=agent_opacity
             ),
         'exposed': dict(
-            color=dark_blue,
+            color=exposed_color,
             size=agent_size,
             opacity=agent_opacity
             ),
         'asymptomatic': dict(
-            color=dark_purple,
+            color=asymptomatic_color,
             size=agent_size,
             opacity=agent_opacity
             ),
         'mildly-ill': dict(
-            color=dark_orange,
+            color=mildly_ill_color,
             size=agent_size,
             opacity=agent_opacity
             ),
         'seriously-ill': dict(
-            color=dark_red,
+            color=seriously_ill_color,
             size=agent_size,
             opacity=agent_opacity
             ),
         'recovered': dict(
-            color=dark_gray,
+            color=recovered_color,
+            size=agent_size,
+            opacity=agent_opacity
+            ),
+        'inmune': dict(
+            color=inmune_color,
+            size=agent_size,
+            opacity=agent_opacity
+            ),
+        'dead': dict(
+            color=dead_color,
             size=agent_size,
             opacity=agent_opacity
             )
@@ -713,22 +1063,28 @@ if __name__ == "__main__":
 
     disease_states_line_colors = {
         'susceptible': dict(
-            color=dark_green
+            color=susceptible_color
             ),
         'exposed': dict(
-            color=dark_blue
+            color=exposed_color
             ),
         'asymptomatic': dict(
-            color=dark_purple
+            color=asymptomatic_color
             ),
         'mildly-ill': dict(
-            color=dark_orange
+            color=mildly_ill_color
             ),
         'seriously-ill': dict(
-            color=dark_red
+            color=seriously_ill_color
             ),
         'recovered': dict(
-            color=dark_gray
+            color=recovered_color
+            ),
+        'inmune': dict(
+            color=inmune_color
+            ),
+        'dead': dict(
+            color=dead_color
             )
         }
 
@@ -740,35 +1096,19 @@ if __name__ == "__main__":
         dead_color_dict=dead_color_dict,
         vulnerability_groups_markers=vulnerability_groups_markers,
         disease_states_markers_colors=disease_states_markers_colors,
-        disease_states_line_colors=disease_states_line_colors
+        disease_states_line_colors=disease_states_line_colors,
+        max_length_in_px=800
         )
 
     #===========================================================================
-    # Plot initial location
-    basic_population_graphs.plot_current_locations()
+    # Plot initial locations
+    basic_population_graphs.plot_locations(step=0)
 
-    start_time = time.time()
-
-    for i in range(100):
-        basic_population.evolve_population()
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
-
-    # Change plot_current_locations to plot_locations(step)
-    basic_population_graphs = BasicPopulationGraphs(
-        basic_population=basic_population,
-        agent_marker_line_width=agent_marker_line_width,
-        natural_death=natural_death,
-        dead_by_disease=dead_by_disease,
-        dead_color_dict=dead_color_dict,
-        vulnerability_groups_markers=vulnerability_groups_markers,
-        disease_states_markers_colors=disease_states_markers_colors,
-        disease_states_line_colors=disease_states_line_colors
+    #===========================================================================
+    # Plot final locations
+    basic_population_graphs.plot_locations(
+        step=basic_population.agents_info_df['step'].to_list()[-1]
         )
-
-    basic_population_graphs.plot_current_locations()
 
     # basic_population_graphs.animate_population()
 

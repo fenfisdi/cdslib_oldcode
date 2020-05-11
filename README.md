@@ -1,5 +1,5 @@
 # CDS Library
-Contagious Disease Simulator - Library
+Contagious Disease Simulation - Library
 
 ## Install
 

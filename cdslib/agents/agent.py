@@ -3,22 +3,49 @@ import numpy as np
 
 dim = 2
 
+def determine_age_group(
+    population_age_groups_info: dict,
+    age: float
+    ):
+    """
+    """
+    for age_group in population_age_groups_info.keys():
+
+        age_group_dict = population_age_groups_info[age_group]
+
+        if age_group_dict['min_age'] and age_group_dict['max_age']:
+            if (age_group_dict['min_age'] <= age
+            and np.floor(age) <= age_group_dict['max_age']):
+                return age_group
+
+        if not age_group_dict['min_age']:
+            if np.floor(age) <= age_group_dict['max_age']:
+                return age_group
+
+        if not age_group_dict['max_age']:
+            if age_group_dict['min_age'] <= age:
+                return age_group
+
+
 class AgentsInfo:
     """
     """
     def __init__(
         self,
         disease_states: list,
+        susceptibility_groups: list,
         vulnerability_groups: list,
         dynamics_of_the_disease_states_transitions_info: dict,
+        contagion_dynamics_info: dict,
         population_age_groups_info: dict,
-        mortality_of_disease_states_by_vulnerability_group: dict,
         diagnosis_of_disease_states_by_vulnerability_group: dict,
-        hospitalization_of_disease_states_by_vulnerability_group: dict
-    ):
+        hospitalization_of_disease_states_by_vulnerability_group: dict,
+        social_distancing_info: dict
+        ):
         """
         """
         self.disease_states = disease_states
+        self.susceptibility_groups = susceptibility_groups
         self.vulnerability_groups = vulnerability_groups
 
         # dynamics_of_the_disease_states_transitions_info
@@ -27,19 +54,61 @@ class AgentsInfo:
                 'disease_states_time_functions'
                 ]
 
+        self.criticality_level_of_evolution_of_disease_states = \
+            dynamics_of_the_disease_states_transitions_info[
+                'criticality_level_of_evolution_of_disease_states'
+                ]
+
         self.disease_states_transitions_by_vulnerability_group = \
             dynamics_of_the_disease_states_transitions_info[
                 'disease_states_transitions_by_vulnerability_group'
                 ]
 
+        # contagion_dynamics_info
+        self.disease_states_transitions_by_contagion = \
+            contagion_dynamics_info[
+                'disease_states_transitions_by_contagion'
+                ]
+
+        self.criticality_level_of_disease_states_to_susceptibility_to_contagion = \
+            contagion_dynamics_info[
+                'criticality_level_of_disease_states_to_susceptibility_to_contagion'
+            ]
+
+        self.contagion_probabilities_by_susceptibility_groups = \
+            contagion_dynamics_info[
+                'contagion_probabilities_by_susceptibility_groups'
+                ]
+
+        self.dynamics_of_disease_states_contagion = \
+            contagion_dynamics_info[
+                'dynamics_of_disease_states_contagion'
+                ]
+
+        self.inmunization_level_by_vulnerability_group = \
+            contagion_dynamics_info[
+                'inmunization_level_by_vulnerability_group'
+                ]
+
+        # population_age_groups_info
         self.population_age_groups_info = population_age_groups_info
-        self.mortality_of_disease_states_by_vulnerability_group = \
-            mortality_of_disease_states_by_vulnerability_group
+
         self.diagnosis_of_disease_states_by_vulnerability_group = \
             diagnosis_of_disease_states_by_vulnerability_group
+
         self.hospitalization_of_disease_states_by_vulnerability_group = \
             hospitalization_of_disease_states_by_vulnerability_group
 
+        # social_distancing_info
+        self.dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
+            social_distancing_info[
+                'dynamics_of_alertness_of_disease_states_by_vulnerability_group'
+                ]
+
+        self.dynamics_of_avoidance_of_disease_states_by_vulnerability_group = \
+            social_distancing_info[
+                'dynamics_of_avoidance_of_disease_states_by_vulnerability_group'
+                ]
 
 class Agent:
     """
@@ -47,170 +116,344 @@ class Agent:
     def __init__(
         self,
         agents_info: AgentsInfo,
-        agent: int,
         x: float,
         y: float,
         vmax: float,
-        group: str,
-        state: str,
+        agent: int,
+        disease_state: str,
+        susceptibility_group: str,
+        vulnerability_group: str,
         age: float,
+        age_group: str,
         diagnosed: bool=False,
         inmunization_level: float=0.0
-    ):
+        ):
         """
         """
         # Define private atributes from AgentsInfo atributes
+        """
+            for key, value in zip(
+                agents_info.__dict__.keys(),
+                agents_info.__dict__.values()
+                ):
+                setattr(self, '__' + key, value)
+        """
         self.__disease_states = agents_info.disease_states
+        self.__susceptibility_groups = agents_info.susceptibility_groups
         self.__vulnerability_groups = agents_info.vulnerability_groups
+
+        # dynamics_of_the_disease_states_transitions_info
         self.__disease_states_time_functions = \
             agents_info.disease_states_time_functions
+
+        self.__criticality_level_of_evolution_of_disease_states = \
+            agents_info.criticality_level_of_evolution_of_disease_states
+
         self.__disease_states_transitions_by_vulnerability_group = \
             agents_info.disease_states_transitions_by_vulnerability_group
+
+        # contagion_dynamics_info
+        self.__disease_states_transitions_by_contagion = \
+            agents_info.disease_states_transitions_by_contagion
+
+        self.__contagion_probabilities_by_susceptibility_groups = \
+            agents_info.contagion_probabilities_by_susceptibility_groups
+
+        self.__criticality_level_of_disease_states_to_susceptibility_to_contagion = \
+            agents_info.criticality_level_of_disease_states_to_susceptibility_to_contagion
+
+        self.__dynamics_of_disease_states_contagion = \
+            agents_info.dynamics_of_disease_states_contagion
+
+        self.__inmunization_level_by_vulnerability_group = \
+            agents_info.inmunization_level_by_vulnerability_group
+
+        # population_age_groups_info
         self.__population_age_groups_info = \
             agents_info.population_age_groups_info
-        self.__mortality_of_disease_states_by_vulnerability_group = \
-            agents_info.mortality_of_disease_states_by_vulnerability_group
+
         self.__diagnosis_of_disease_states_by_vulnerability_group = \
             agents_info.diagnosis_of_disease_states_by_vulnerability_group
+
         self.__hospitalization_of_disease_states_by_vulnerability_group = \
             agents_info.hospitalization_of_disease_states_by_vulnerability_group
 
+        # social_distancing_info
+        self.__dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
+            agents_info.dynamics_of_alertness_of_disease_states_by_vulnerability_group
+
+        self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group = \
+            agents_info.dynamics_of_avoidance_of_disease_states_by_vulnerability_group
+
+
         # Define agent label
-        self.agent = agent
+        self.agent: int = agent
+
+        self.age: float = age
+
+        self.age_group: str = age_group
 
         # Define position
-        self.x = x
-        self.y = y
+        self.x: float = x
+        self.y: float = y
 
         # Define initial velocity between (-vmax , +vmax)
         self.vx, self.vy = 2. * vmax * np.random.random_sample(dim) - vmax
 
-        # Initialize group, state, and diagnosed state
-        self.group = group
+        # Initialize disease_state, susceptibility_group,
+        # vulnerability_group and diagnosis state 
+        self.disease_state: str = disease_state
 
-        self.state = state
+        self.susceptibility_group: str = susceptibility_group
 
-        self.diagnosed = diagnosed
+        self.vulnerability_group: str = vulnerability_group
 
-        self.hospitalized = False
+        self.diagnosed: bool = diagnosed
 
-        self.requires_UCI = False
+        self.hospitalized: bool = False
 
-        self.waiting_diagnosis = False
+        self.is_in_UCI: bool = False
 
-        self.time_waiting_diagnosis = None
+        self.waiting_diagnosis: bool = False
 
-        self.infected_by = None
+        self.time_waiting_diagnosis: int = None
 
-        self.inmunization_level = inmunization_level
+        self.infected_by: list = []
+        self.infected_in_step: int = None
+        self.infected_info: dict = {}
 
-        self.alertness = False
+        self.inmunization_level: float = inmunization_level
 
-        self.alerted_by = []
+        self.contacted_with: list = []
 
-        self.state_time = 0
+        self.alertness: bool = False
 
-        self.live_state = 'alive'
+        self.alerted_by: list = []
 
-        self.age = age
+        self.disease_state_time: int = 0
 
-        # Determine age group
-        self.determine_age_group()
+        self.live_state: str = 'alive'
 
         # Determine state time
-        self.determine_state_time()
+        self.determine_disease_state_time()
+
+        # Determine times infected
+        self.is_infected: bool
+        self.times_infected: int
+
+        if self.__dynamics_of_disease_states_contagion[self.disease_state]['is_infected']:
+            self.is_infected = True
+            self.times_infected = 1
+        else:
+            self.is_infected = False
+            self.times_infected = 0
 
 
     def getstate(self):
-
+        """
+        """
         agent_dict = copy.deepcopy(self.__dict__)
 
         # Remove private attributes
-        del agent_dict['_Agent__disease_states']
-        del agent_dict['_Agent__vulnerability_groups']
-        del agent_dict['_Agent__disease_states_time_functions']
-        del agent_dict['_Agent__disease_states_transitions_by_vulnerability_group']
-        del agent_dict['_Agent__population_age_groups_info']
-        del agent_dict['_Agent__mortality_of_disease_states_by_vulnerability_group']
-        del agent_dict['_Agent__diagnosis_of_disease_states_by_vulnerability_group']
-        del agent_dict['_Agent__hospitalization_of_disease_states_by_vulnerability_group']
+        remove_list = [key for key in agent_dict.keys() if '_Agent__' in key]
+
+        for key in remove_list:
+            del agent_dict[key]
 
         return agent_dict
 
 
     def getkeys(self):
-
+        """
+        """
         agent_dict = self.getstate()
 
         return agent_dict.keys()
 
 
-    def determine_state_time(self):
+    def determine_disease_state_time(self):
         """
         """
         if self.__disease_states_time_functions[
-            self.group][self.state]['time_function']:
+            self.vulnerability_group][self.disease_state]['time_function']:
 
-            self.state_max_time = \
+            self.disease_state_max_time = \
                 self.__disease_states_time_functions[
-                self.group][self.state]['time_function']()
+                self.vulnerability_group][self.disease_state]['time_function']()
 
         else:
-            self.state_max_time = None
+            self.disease_state_max_time = None
 
 
-    def state_transition(
+    def disease_state_transition(
         self,
         dt: float
         ):
         """
         """
-        self.state_time += dt
+        self.disease_state_time += dt
 
-        if (self.state_max_time and self.state_time == self.state_max_time):
+        if (self.disease_state_max_time
+        and self.disease_state_time == self.disease_state_max_time):
 
             # Verify: becomes into ? ... Throw the dice
             dice = np.random.random_sample()
 
-            cummulative_probability = 0
+            cummulative_probability = 0. + self.inmunization_level
 
-            # OJO con SORTED
-            for (probability, becomes_into_state) in zip(
-                self.__disease_states_transitions_by_vulnerability_group[
-                    self.group][self.state]['transition_probability'],
-                self.__disease_states_transitions_by_vulnerability_group[
-                    self.group][self.state]['becomes_into']
+            for (probability, becomes_into_disease_state) in sorted(
+                zip(
+                    self.__disease_states_transitions_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['transition_probability'],
+                    self.__disease_states_transitions_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['becomes_into']
+                    ),
+                # In order to use criticality_level
+                # pair = (probability, becomes_into_disease_state)
+                key=lambda pair: self.__criticality_level_of_evolution_of_disease_states[pair[1]]
                 ):
+
                 cummulative_probability += probability
 
                 if dice <= cummulative_probability:
-                    
-                    self.state = becomes_into_state
-                    
-                    self.update_diagnosis_state(dt, the_state_changed=True)
-                    self.update_hospitalization_state()
 
-                    self.state_time = 0
+                    self.update_infection_status(becomes_into_disease_state)
 
-                    self.determine_state_time()
+                    self.disease_state = becomes_into_disease_state
+
+                    if becomes_into_disease_state == 'dead':
+                        # Agent die by disease
+                        self.live_state = 'dead by disease'
+                    else:
+                        self.update_diagnosis_state(dt, the_state_changed=True)
+                        self.update_hospitalization_state()
+
+                    self.disease_state_time = 0
+
+                    self.determine_disease_state_time()
 
                     break
-        
+
         self.update_diagnosis_state(dt, the_state_changed=False)
         self.update_hospitalization_state()
+
+
+    def disease_state_transition_by_contagion(
+        self,
+        step: int,
+        spatial_trees_by_disease_state: dict,
+        agents_indices_by_disease_state: dict
+        ):
+        """
+        """
+        # Agent can get infected ?
+        if self.__dynamics_of_disease_states_contagion[
+            self.disease_state]['can_get_infected']:
+
+            # Retrieve agent location
+            agent_location = [self.x, self.y]
+
+            # List to save who infected the agent
+            infected_by = []
+
+            # Cycle through each spreader to see if the agent gets 
+            # infected by the spreader
+            for disease_state in self.__disease_states:
+
+                if (self.__dynamics_of_disease_states_contagion[
+                    disease_state]['can_spread']
+                and spatial_trees_by_disease_state[disease_state]):
+
+                    # Detect if any spreader is inside a distance equal to
+                    # the corresponding spread_radius
+                    points_inside_radius = \
+                        spatial_trees_by_disease_state[disease_state].query_ball_point(
+                            agent_location,
+                            self.__dynamics_of_disease_states_contagion[
+                                disease_state]['spread_radius']
+                            )
+
+                    spreaders_indices_inside_radius = \
+                        agents_indices_by_disease_state[
+                            disease_state][points_inside_radius]
+
+                    # If self.agent in spreaders_indices_inside_radius,
+                    # then remove it
+                    if self.agent in spreaders_indices_inside_radius:
+
+                        spreaders_indices_inside_radius = np.setdiff1d(
+                            spreaders_indices_inside_radius,
+                            self.agent
+                            )
+
+                    # Calculate joint probability for contagion
+                    joint_probability = \
+                        (1.0 - self.inmunization_level) \
+                        * self.__contagion_probabilities_by_susceptibility_groups[
+                            self.susceptibility_group] \
+                        * self.__dynamics_of_disease_states_contagion[
+                            disease_state]['spread_probability']
+
+                    # Check if got infected
+                    for spreader_agent_index in spreaders_indices_inside_radius:
+                        # Throw the dice
+                        dice = np.random.random_sample()
+
+                        if dice <= joint_probability:
+                            # Got infected !!!
+                            # Save who infected the agent
+                            infected_by.append(spreader_agent_index)
+
+
+            if len(infected_by) is not 0:
+
+                self.infected_by = infected_by
+                self.infected_in_step = step
+                self.infected_info[step] = infected_by
+
+                # Verify: becomes into ? ... Throw the dice
+                dice = np.random.random_sample()
+
+                cummulative_probability = 0. + self.inmunization_level
+
+                for (probability, becomes_into_disease_state) in sorted(
+                    zip(
+                        self.__disease_states_transitions_by_contagion[
+                            self.disease_state]['transition_probability'],
+                        self.__disease_states_transitions_by_contagion[
+                            self.disease_state]['becomes_into']
+                        ),
+                    # In order to use criticality_level
+                    # pair = (probability, becomes_into_disease_state)
+                    key=lambda pair: self.__criticality_level_of_disease_states_to_susceptibility_to_contagion[pair[1]]
+                    ):
+                    cummulative_probability += probability
+
+                    if dice <= cummulative_probability:
+
+                        self.update_infection_status(becomes_into_disease_state)
+
+                        self.disease_state = becomes_into_disease_state
+
+                        self.update_diagnosis_state(step, the_state_changed=True)
+
+                        self.disease_state_time = 0
+
+                        self.determine_disease_state_time()
+
+                        break
+        else:
+            # Agent cannot get infected
+            pass
 
 
     def determine_age_group(self):
         """
         """
-        for age_group in self.__population_age_groups_info.keys():
-
-            age_group_dict = self.__population_age_groups_info[age_group]
-
-            if (age_group_dict['min_age'] <= self.age
-            and np.floor(self.age) <= age_group_dict['max_age']):
-
-                self.age_group = age_group
+        self.age_group = determine_age_group(
+            self.__population_age_groups_info,
+            self.age
+            )
 
 
     def age_and_death_verification(
@@ -221,40 +464,54 @@ class Agent:
         """
         dead = False
 
-        #=============================================
-        # Increment age
-        self.age += dt_scale_in_years
-
-        # Determine age group
-        self.determine_age_group()
-
-        #=============================================
-        # Verify: natural death ? ... Throw the dice
-        dice = np.random.random_sample()
-
-        if dice <= self.__population_age_groups_info[
-            self.age_group]['mortality_probability']:
-            # The agent died
+        if self.live_state == 'dead by disease':
             dead = True
+        else:
+            #=============================================
+            # Increment age
+            self.age += dt_scale_in_years
 
-            # Agent died by natural reasons
-            self.live_state = 'natural death'
+            # Determine age group
+            self.determine_age_group()
 
-        #=============================================
-        # Verify: dead by disease ? ... Throw the dice
-        dice = np.random.random_sample()
+            #=============================================
+            # Verify: natural death ? ... Throw the dice
+            dice = np.random.random_sample()
 
-        if self.__mortality_of_disease_states_by_vulnerability_group[
-            self.group][self.state]['mortality_probability']:
-            if dice <= self.__mortality_of_disease_states_by_vulnerability_group[
-                self.group][self.state]['mortality_probability']:
+            if dice <= self.__population_age_groups_info[
+            self.age_group]['mortality_probability']:
+
                 # The agent died
                 dead = True
 
-                # Agent die by disease
-                self.live_state = 'dead by disease'
+                # Agent died by natural reasons
+                self.live_state = 'natural death'
 
         return dead
+
+
+    def update_infection_status(
+        self,
+        becomes_into_disease_state: str
+        ):
+        """
+        """
+        if (not self.__dynamics_of_disease_states_contagion[self.disease_state]['is_infected']
+        and self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']):
+            self.is_infected = True
+            self.times_infected += 1
+        elif not self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']:
+            self.is_infected = False
+
+            # Inmunization level
+            self.update_inmunization_level()
+
+
+    def update_inmunization_level(self):
+        """
+        """
+        self.inmunization_level += \
+            self.__inmunization_level_by_vulnerability_group[self.vulnerability_group]
 
 
     def update_diagnosis_state(
@@ -278,13 +535,14 @@ class Agent:
                 if not self.waiting_diagnosis:
 
                     if self.__diagnosis_of_disease_states_by_vulnerability_group[
-                        self.group][self.state]['can_be_diagnosed']:
+                    self.vulnerability_group][self.disease_state]['can_be_diagnosed']:
 
                         # Verify: is going to be diagnosed ? ... Throw the dice
                         dice = np.random.random_sample()
 
-                        if dice <= self.__diagnosis_of_disease_states_by_vulnerability_group[
-                            self.group][self.state]['diagnosis_probability']:
+                        if dice <= \
+                        self.__diagnosis_of_disease_states_by_vulnerability_group[
+                        self.vulnerability_group][self.disease_state]['diagnosis_probability']:
 
                             # Agent is going to be diagnosed !!!
                             self.waiting_diagnosis = True
@@ -299,25 +557,14 @@ class Agent:
                     self.time_waiting_diagnosis += dt
 
                     if self.time_waiting_diagnosis == \
-                        self.__diagnosis_of_disease_states_by_vulnerability_group[
-                        self.group][self.state]['diagnosis_time']:
+                    self.__diagnosis_of_disease_states_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['diagnosis_time']:
 
-                        # Can be diagnosed ? (in other words: Is infected ?)
-                        if self.__diagnosis_of_disease_states_by_vulnerability_group[
-                            self.group][self.state]['can_be_diagnosed']:
+                        self.diagnosed = True
 
-                            self.diagnosed = True
+                        self.waiting_diagnosis = False
 
-                            self.waiting_diagnosis = False
-
-                            self.time_waiting_diagnosis = None
-
-                        else:
-                            self.diagnosed = False
-
-                            self.waiting_diagnosis = False
-
-                            self.time_waiting_diagnosis = None
+                        self.time_waiting_diagnosis = None
 
             else:
                 # Agent is diagnosed
@@ -327,8 +574,8 @@ class Agent:
 
             # If agent cannot be diagnosed
             if not self.__diagnosis_of_disease_states_by_vulnerability_group[
-                self.group][self.state]['can_be_diagnosed']:
-                
+            self.vulnerability_group][self.disease_state]['can_be_diagnosed']:
+
                 self.diagnosed = False
 
                 self.waiting_diagnosis = False
@@ -337,23 +584,22 @@ class Agent:
 
 
     def update_hospitalization_state(self):
+        """
+        """
         # Agent can be hospitalized ?
         if self.__hospitalization_of_disease_states_by_vulnerability_group[
-            self.group][self.state]['can_be_hospitalized']:
-        
+        self.vulnerability_group][self.disease_state]['can_be_hospitalized']:
+
             if not self.hospitalized:
 
                 #=============================================
                 # Verify: is hospitalized ? ... Throw the dice
                 dice = np.random.random_sample()
 
-                if (
+                if dice <= \
                 self.__hospitalization_of_disease_states_by_vulnerability_group[
-                    self.group][self.state]['hospitalization_probability']
-                and dice <= \
-                self.__hospitalization_of_disease_states_by_vulnerability_group[
-                    self.group][self.state]['hospitalization_probability']):
-                    
+                self.vulnerability_group][self.disease_state]['hospitalization_probability']:
+
                     # Agent is hospitalized !!!
                     self.hospitalized = True
 
@@ -361,24 +607,143 @@ class Agent:
                     # Verify: needs UCI ? ... Throw the dice
                     dice = np.random.random_sample()
 
-                    if (
-                        self.__hospitalization_of_disease_states_by_vulnerability_group[
-                            self.group][self.state]['UCI_probability']
-                        and dice <= \
-                        self.__hospitalization_of_disease_states_by_vulnerability_group[
-                            self.group][self.state]['UCI_probability']
-                        ):
-                        
+                    if dice <= \
+                    self.__hospitalization_of_disease_states_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['UCI_probability']:
+
                         # Agent needs UCI !!!
-                        self.requires_UCI = True
+                        self.is_in_UCI = True
 
             else:
-                pass
+                # Agent is hospitalized
+
+                if not self.is_in_UCI:
+
+                    #=============================================
+                    # Verify: needs UCI ? ... Throw the dice
+                    dice = np.random.random_sample()
+
+                    if dice <= \
+                    self.__hospitalization_of_disease_states_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['UCI_probability']:
+
+                        # Agent needs UCI !!!
+                        self.is_in_UCI = True
         else:
             # Agent can not be hospitalized ?
             self.hospitalized = False
 
-            self.requires_UCI = False
+            self.is_in_UCI = False
+
+
+    def update_alertness_state(
+        self,
+        step: int,
+        spatial_trees_by_disease_state: dict,
+        agents_indices_by_disease_state: dict,
+        population_positions: dict,
+        population_velocities: dict
+        ):
+        """
+        """
+        # Initialize agent alertness
+        self.alertness = False
+        self.contacted_with = []
+        self.alerted_by = []
+
+        #=============================================
+        # Agent should be alert?
+        if self.__dynamics_of_alertness_of_disease_states_by_vulnerability_group[
+            self.vulnerability_group][self.disease_state]['should_be_alert']:
+            
+            # Retrieve agent location
+            agent_location = [self.x, self.y]
+
+            # Initialize "alerted by"
+            alerted_by = []
+
+            # Cycle through each state of the neighbors to see if the agent
+            # should be alert
+            for disease_state in self.__disease_states:
+
+                # Note that an 'avoidable_agent' depends on its state but
+                # also on each group, it means that each group defines
+                # which state is avoidable
+                if (self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
+                    self.vulnerability_group][disease_state]['avoidable_agent']
+                    and spatial_trees_by_disease_state[disease_state]
+                    ):
+                    
+                    # Detect if any avoidable agent is inside a distance
+                    # equal to the corresponding spread_radius
+                    points_inside_radius = \
+                        spatial_trees_by_disease_state[disease_state].query_ball_point(
+                            agent_location,
+                            self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
+                            self.vulnerability_group][disease_state]['avoidness_radius']
+                            )
+
+                    avoidable_indices_inside_radius = \
+                        agents_indices_by_disease_state[disease_state][points_inside_radius]
+                    
+                    # If agent_index in avoidable_indices_inside_radius,
+                    # then remove it
+                    if self.agent in avoidable_indices_inside_radius:
+                        
+                        avoidable_indices_inside_radius = np.setdiff1d(
+                            avoidable_indices_inside_radius,
+                            self.agent
+                            )
+
+                    if len(avoidable_indices_inside_radius) is not 0:
+
+                        # Append avoidable_indices_inside_radius array
+                        # to self.contacted_with
+                        self.contacted_with = avoidable_indices_inside_radius
+                        
+                        for avoidable_agent_index in avoidable_indices_inside_radius:
+
+                            # Must agent be alert ? ... Throw the dice
+                            dice = np.random.random_sample()
+
+                            # Note that alertness depends on a probability,
+                            # which tries to model the probability that an
+                            # agent with a defined group and state is alert
+                            if (dice <= \
+                                self.__dynamics_of_alertness_of_disease_states_by_vulnerability_group[
+                                self.vulnerability_group][self.disease_state]['alertness_probability']
+                                ):
+
+                                # Agent is alerted !!!
+                                self.alertness = True
+
+                                # Append avoidable_agent_index in alerted_by
+                                alerted_by.append(avoidable_agent_index)
+
+            #=============================================
+            # Change movement direction if agent's alertness = True
+            if self.alertness:
+
+                # Append alerted_by array to self.alerted_by 
+                self.alerted_by = alerted_by
+
+                # Retrieve positions of the agents to be avoided
+                positions_to_avoid = [
+                    population_positions[agent_to_be_avoided]
+                    for agent_to_be_avoided in self.alerted_by
+                    ]
+
+                # Retrieve velocities of the agents to be avoided
+                velocities_to_avoid = [
+                    population_velocities[agent_to_be_avoided]
+                    for agent_to_be_avoided in self.alerted_by
+                    ]
+
+                # Change movement direction
+                self.alert_avoid_agents(
+                    positions_to_avoid,
+                    velocities_to_avoid
+                    )
 
 
     def alert_avoid_agents(
@@ -552,7 +917,7 @@ class Agent:
 
         #=============================================
         # Physical movement
-        self.physical_movement(dt,  maximum_free_random_speed)
+        self.physical_movement(dt, maximum_free_random_speed)
 
 
     def avoid_frontier(
