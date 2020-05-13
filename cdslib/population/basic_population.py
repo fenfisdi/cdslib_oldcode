@@ -9,7 +9,10 @@ from cdslib.agents.agent import determine_age_group
 # TODO
 # Improve diagnosis state?? (using networks)
 #
-# Quarentine, hospitalization, UCI
+# hospitalization, UCI
+# Quarentine
+# Parallellization
+#
 # Movility profiles? ... Clases of Agents
 # Virus halo ... Probability density
 # Add units

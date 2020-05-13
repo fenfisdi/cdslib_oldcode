@@ -69,34 +69,59 @@ class BasicPopulationGraphs:
         vulnerability_group = agent_dict['vulnerability_group']
         disease_state = agent_dict['disease_state']
         diagnosed = agent_dict['diagnosed']
-        infected_by = agent_dict['infected_by']
-        infected_in_step = agent_dict['infected_in_step']
         contacted_with = agent_dict['contacted_with']
         alerted_by = agent_dict['alerted_by']
 
-        if live_state == 'alive':
+        infected_info = agent_dict['infected_info']
 
-            template = (
-                f'<b>Agent</b>: {agent_label}'
-                '<br>'
-                f'<b>Position</b>: ({x:.2f}, {y:.2f})'
-                '<br>'
-                f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
-                '<br>'
-                f'<b>Vulnerability group</b>: {vulnerability_group}'
-                '<br>'
-                f'<b>Disease state</b>: {disease_state}'
-                '<br>'
-                f'<b>Diagnosed</b>: {diagnosed}'
-                '<br>'
-                f'<b>Infected by</b>: {infected_by}'
-                '<br>'
-                f'<b>Infected in step</b>: {infected_in_step:d}'
-                '<br>'
-                f'<b>Contacted with</b>: {contacted_with}'
-                '<br>'
-                f'<b>Alerted by</b>: {alerted_by}'
-                )
+
+        if live_state == 'alive':
+            if len(list(infected_info.keys())) != 0:
+
+                infected_by = agent_dict['infected_by']
+                infected_in_step = agent_dict['infected_in_step']
+
+                template = (
+                    f'<b>Agent</b>: {agent_label}'
+                    '<br>'
+                    f'<b>Position</b>: ({x:.2f}, {y:.2f})'
+                    '<br>'
+                    f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
+                    '<br>'
+                    f'<b>Vulnerability group</b>: {vulnerability_group}'
+                    '<br>'
+                    f'<b>Disease state</b>: {disease_state}'
+                    '<br>'
+                    f'<b>Diagnosed</b>: {diagnosed}'
+                    '<br>'
+                    f'<b>Infected by</b>: {infected_by}'
+                    '<br>'
+                    f'<b>Infected in step</b>: {infected_in_step:.0f}'
+                    '<br>'
+                    f'<b>Contacted with</b>: {contacted_with}'
+                    '<br>'
+                    f'<b>Alerted by</b>: {alerted_by}'
+                    )
+
+            else:
+                template = (
+                    f'<b>Agent</b>: {agent_label}'
+                    '<br>'
+                    f'<b>Position</b>: ({x:.2f}, {y:.2f})'
+                    '<br>'
+                    f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
+                    '<br>'
+                    f'<b>Vulnerability group</b>: {vulnerability_group}'
+                    '<br>'
+                    f'<b>Disease state</b>: {disease_state}'
+                    '<br>'
+                    f'<b>Diagnosed</b>: {diagnosed}'
+                    '<br>'
+                    f'<b>Contacted with</b>: {contacted_with}'
+                    '<br>'
+                    f'<b>Alerted by</b>: {alerted_by}'
+                    )
+
 
             return go.Scatter(
                 x=[x],
@@ -214,13 +239,13 @@ class BasicPopulationGraphs:
         # Retrieve dead agents
         dead_agents_df = population_df.loc[
             population_df['live_state'] != 'alive'
-        ].copy()
+            ].copy()
 
         # Re-populate population_df filling each step with dead_agents in former steps
         for t in t_list:
             df = dead_agents_df.loc[
                 dead_agents_df['step'] == t
-            ]
+                ]
 
             if df.shape[0] != 0:
                 for future_t in range(t+1, t_list[-1]):
@@ -229,7 +254,7 @@ class BasicPopulationGraphs:
                     population_df = population_df.append(
                         future_df,
                         ignore_index=True
-                    )
+                        )
 
         # Fill full_data
         full_data = []
@@ -237,7 +262,7 @@ class BasicPopulationGraphs:
         for t in t_list:
             population_data = population_df.loc[
                 population_df['step'] == t
-            ].sort_values(by=['agent']).to_dict(orient='records')
+                ].sort_values(by=['agent']).to_dict(orient='records')
             
             full_data.append(
                 [self.go_agent_scatter(population_data[i])
@@ -300,20 +325,22 @@ class BasicPopulationGraphs:
                 x=x,
                 y=y,
                 mode='lines',
+                connectgaps=False,
                 line=self.disease_states_line_colors[name],
                 name=name
-            )
+                )
         else:
             return go.Scatter(
                 x=x,
                 y=y,
                 mode='lines',
+                connectgaps=False,
                 name=name
-            )
+                )
+
 
     def agents_times_series_plot(
         self,
-        agents_dataframe,
         mode: str='states',
         column: str=None,
         inspection_values: list=None
@@ -321,10 +348,11 @@ class BasicPopulationGraphs:
         """
             mode: str
         """
+
         if mode == 'states':
 
-            df = agents_dataframe.loc[
-                agents_dataframe['live_state'] == 'alive' 
+            df = self.agents_info_df.loc[
+                self.agents_info_df['live_state'] == 'alive' 
                 ][['step', 'agent', 'disease_state']].groupby(
                     ['step', 'disease_state'],
                     as_index=False
@@ -335,7 +363,7 @@ class BasicPopulationGraphs:
                 inplace=True
                 )
             
-            states = agents_dataframe['disease_state'].unique()
+            states = self.agents_info_df['disease_state'].unique()
             
             fig = go.Figure()
             
@@ -360,7 +388,7 @@ class BasicPopulationGraphs:
             fig.show()
 
         if mode == 'infection':
-            infection_df = agents_dataframe.copy()
+            infection_df = self.agents_info_df.copy()
 
             infection_df['infection_state'] = func(
                 infection_df['disease_state'].to_list()

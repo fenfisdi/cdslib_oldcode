@@ -39,7 +39,7 @@ class AgentsInfo:
         contagion_dynamics_info: dict,
         population_age_groups_info: dict,
         diagnosis_of_disease_states_by_vulnerability_group: dict,
-        hospitalization_of_disease_states_by_vulnerability_group: dict,
+        hospitalization_info: dict,
         social_distancing_info: dict
         ):
         """
@@ -96,8 +96,16 @@ class AgentsInfo:
         self.diagnosis_of_disease_states_by_vulnerability_group = \
             diagnosis_of_disease_states_by_vulnerability_group
 
+        # hospitalization_info
+        self.hospital_information = \
+            hospitalization_info[
+                    'hospital_information'
+                ]
+
         self.hospitalization_of_disease_states_by_vulnerability_group = \
-            hospitalization_of_disease_states_by_vulnerability_group
+            hospitalization_info[
+                    'hospitalization_of_disease_states_by_vulnerability_group'
+                ]
 
         # social_distancing_info
         self.dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
@@ -131,60 +139,11 @@ class Agent:
         """
         """
         # Define private atributes from AgentsInfo atributes
-        """
-            for key, value in zip(
-                agents_info.__dict__.keys(),
-                agents_info.__dict__.values()
-                ):
-                setattr(self, '__' + key, value)
-        """
-        self.__disease_states = agents_info.disease_states
-        self.__susceptibility_groups = agents_info.susceptibility_groups
-        self.__vulnerability_groups = agents_info.vulnerability_groups
-
-        # dynamics_of_the_disease_states_transitions_info
-        self.__disease_states_time_functions = \
-            agents_info.disease_states_time_functions
-
-        self.__criticality_level_of_evolution_of_disease_states = \
-            agents_info.criticality_level_of_evolution_of_disease_states
-
-        self.__disease_states_transitions_by_vulnerability_group = \
-            agents_info.disease_states_transitions_by_vulnerability_group
-
-        # contagion_dynamics_info
-        self.__disease_states_transitions_by_contagion = \
-            agents_info.disease_states_transitions_by_contagion
-
-        self.__contagion_probabilities_by_susceptibility_groups = \
-            agents_info.contagion_probabilities_by_susceptibility_groups
-
-        self.__criticality_level_of_disease_states_to_susceptibility_to_contagion = \
-            agents_info.criticality_level_of_disease_states_to_susceptibility_to_contagion
-
-        self.__dynamics_of_disease_states_contagion = \
-            agents_info.dynamics_of_disease_states_contagion
-
-        self.__inmunization_level_by_vulnerability_group = \
-            agents_info.inmunization_level_by_vulnerability_group
-
-        # population_age_groups_info
-        self.__population_age_groups_info = \
-            agents_info.population_age_groups_info
-
-        self.__diagnosis_of_disease_states_by_vulnerability_group = \
-            agents_info.diagnosis_of_disease_states_by_vulnerability_group
-
-        self.__hospitalization_of_disease_states_by_vulnerability_group = \
-            agents_info.hospitalization_of_disease_states_by_vulnerability_group
-
-        # social_distancing_info
-        self.__dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
-            agents_info.dynamics_of_alertness_of_disease_states_by_vulnerability_group
-
-        self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group = \
-            agents_info.dynamics_of_avoidance_of_disease_states_by_vulnerability_group
-
+        for key, value in zip(
+            agents_info.__dict__.keys(),
+            agents_info.__dict__.values()
+            ):
+            setattr(self, '_Agent__' + key, value)
 
         # Define agent label
         self.agent: int = agent
@@ -601,6 +560,7 @@ class Agent:
                 self.vulnerability_group][self.disease_state]['hospitalization_probability']:
 
                     # Agent is hospitalized !!!
+                    # TODO change to "needs_hospitalization"
                     self.hospitalized = True
 
                     #=============================================
@@ -612,6 +572,7 @@ class Agent:
                     self.vulnerability_group][self.disease_state]['UCI_probability']:
 
                         # Agent needs UCI !!!
+                        # TODO change to "needs_UCI"
                         self.is_in_UCI = True
 
             else:

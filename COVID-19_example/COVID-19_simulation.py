@@ -39,6 +39,16 @@ if __name__ == "__main__":
     #===========================================================================
     # Information needed for AgentsInfo class
 
+    age_groups = [
+        'child',
+        'teenager',
+        'vicenarian',
+        'tricenarian',
+        'quadragenarian',
+        'quinquagenarian',
+        'sexagenarian',
+        ]
+
     disease_states = [
         'susceptible',
         'exposed',
@@ -194,6 +204,9 @@ if __name__ == "__main__":
                     'transition_probability': None
                     }
                 }
+            },
+        'disease_states_transitions_by_illness_complications_by_vulnerability_group': {
+
             }
         }
 
@@ -306,7 +319,7 @@ if __name__ == "__main__":
             },
         'inmunization_level_by_vulnerability_group': {
                 'not-vulnerable': 1.0,
-                'vulnerable': 0.5
+                'vulnerable': 1.0
             }
         }
 
@@ -437,89 +450,111 @@ if __name__ == "__main__":
             }
         }
 
-    hospitalization_of_disease_states_by_vulnerability_group = {
-        'not-vulnerable': {
-            'susceptible': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
+    hospitalization_info = {
+        'hospital_information': {
+            'H1': {
+                'x': 0.0,
+                'y': 0.0,
+                'hospital_capacity': 40,
+                'UCI_capacity': 10
                 },
-            'exposed': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
+            'H2': {
+                'x': 0.0,
+                'y': 30.0,
+                'hospital_capacity': 40,
+                'UCI_capacity': 20
                 },
-            'asymptomatic': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'mildly-ill': {
-                'can_be_hospitalized': True,
-                'hospitalization_probability': 0.05,
-                'UCI_probability': 0.0
-                },
-            'seriously-ill': {
-                'can_be_hospitalized': True,
-                'hospitalization_probability': 1.0,
-                'UCI_probability': 0.10
-                },
-            'recovered': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'inmune': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'dead': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
+            'H3': {
+                'x': -30.0,
+                'y': 0.0,
+                'hospital_capacity': 40,
+                'UCI_capacity': 15
                 }
             },
-        'vulnerable': {
-            'susceptible': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
+        'hospitalization_of_disease_states_by_vulnerability_group': {
+            'not-vulnerable': {
+                'susceptible': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'exposed': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'asymptomatic': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'mildly-ill': {
+                    'can_be_hospitalized': True,
+                    'hospitalization_probability': 0.05,
+                    'UCI_probability': 0.0
+                    },
+                'seriously-ill': {
+                    'can_be_hospitalized': True,
+                    'hospitalization_probability': 1.0,
+                    'UCI_probability': 0.10
+                    },
+                'recovered': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'inmune': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'dead': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    }
                 },
-            'exposed': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'asymptomatic': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'mildly-ill': {
-                'can_be_hospitalized': True,
-                'hospitalization_probability': 0.30,
-                'UCI_probability': 0.0
-                },
-            'seriously-ill': {
-                'can_be_hospitalized': True,
-                'hospitalization_probability': 1.0,
-                'UCI_probability': 0.50
-                },
-            'recovered': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'inmune': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
-                },
-            'dead': {
-                'can_be_hospitalized': False,
-                'hospitalization_probability': None,
-                'UCI_probability': None
+            'vulnerable': {
+                'susceptible': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'exposed': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'asymptomatic': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'mildly-ill': {
+                    'can_be_hospitalized': True,
+                    'hospitalization_probability': 0.30,
+                    'UCI_probability': 0.0
+                    },
+                'seriously-ill': {
+                    'can_be_hospitalized': True,
+                    'hospitalization_probability': 1.0,
+                    'UCI_probability': 0.50
+                    },
+                'recovered': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'inmune': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'dead': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    }
                 }
             }
         }
@@ -685,25 +720,15 @@ if __name__ == "__main__":
         population_age_groups_info=population_age_groups_info,
         diagnosis_of_disease_states_by_vulnerability_group= \
             diagnosis_of_disease_states_by_vulnerability_group,
-        hospitalization_of_disease_states_by_vulnerability_group= \
-            hospitalization_of_disease_states_by_vulnerability_group,
+        hospitalization_info= \
+            hospitalization_info,
         social_distancing_info=social_distancing_info
         )
 
     #===========================================================================
     # Information needed for BasicPopulation class
 
-    initial_population_number = 1000
-
-    age_group_list = [
-        'child',
-        'teenager',
-        'vicenarian',
-        'tricenarian',
-        'quadragenarian',
-        'quinquagenarian',
-        'sexagenarian',
-        ]
+    initial_population_number = 20
 
     initial_population_age_distribution = {
         'child': 0.10,
@@ -939,7 +964,7 @@ if __name__ == "__main__":
         }
 
     basic_population = BasicPopulation(
-        age_group_list=age_group_list,
+        age_group_list=age_groups,
         susceptibility_group_list=susceptibility_groups,
         vulnerability_group_list=vulnerability_groups,
         disease_state_list=disease_states,
@@ -1097,7 +1122,7 @@ if __name__ == "__main__":
         vulnerability_groups_markers=vulnerability_groups_markers,
         disease_states_markers_colors=disease_states_markers_colors,
         disease_states_line_colors=disease_states_line_colors,
-        max_length_in_px=800
+        max_length_in_px=700
         )
 
     #===========================================================================
@@ -1112,10 +1137,9 @@ if __name__ == "__main__":
 
     # basic_population_graphs.animate_population()
 
-    basic_population_graphs.agents_times_series_plot(basic_population.agents_info_df)
+    basic_population_graphs.agents_times_series_plot()
 
     basic_population_graphs.agents_times_series_plot(
-        basic_population.agents_info_df,
         mode='infection'
         )
 
