@@ -145,6 +145,8 @@ class Agent:
             ):
             setattr(self, '_Agent__' + key, value)
 
+        self.__vmax = vmax
+
         # Define agent label
         self.agent: int = agent
 
@@ -284,8 +286,13 @@ class Agent:
                         # Agent die by disease
                         self.live_state = 'dead by disease'
                     else:
+                        previous_diagnosis_state = self.diagnosed
                         self.update_diagnosis_state(dt, the_state_changed=True)
+                        self.individual_quarantine_function(previous_diagnosis_state)
+
+                        previous_hospitalization_state = self.hospitalized
                         self.update_hospitalization_state()
+                        self.hospitalization_function(previous_hospitalization_state)
 
                     self.disease_state_time = 0
 
@@ -293,8 +300,14 @@ class Agent:
 
                     break
 
-        self.update_diagnosis_state(dt, the_state_changed=False)
-        self.update_hospitalization_state()
+        else:
+            previous_diagnosis_state = self.diagnosed
+            self.update_diagnosis_state(dt, the_state_changed=False)
+            self.individual_quarantine_function(previous_diagnosis_state)
+
+            previous_hospitalization_state = self.hospitalized
+            self.update_hospitalization_state()
+            self.hospitalization_function(previous_hospitalization_state)
 
 
     def disease_state_transition_by_contagion(
@@ -394,7 +407,9 @@ class Agent:
 
                         self.disease_state = becomes_into_disease_state
 
+                        previous_diagnosis_state = self.diagnosed
                         self.update_diagnosis_state(step, the_state_changed=True)
+                        self.individual_quarantine_function(previous_diagnosis_state)
 
                         self.disease_state_time = 0
 
@@ -932,3 +947,43 @@ class Agent:
             dvy = maximum_free_random_speed * np.random.random_sample() \
                 - maximum_free_random_speed/2
             self.vy = self.vy + dvy
+
+
+    def individual_quarantine_function(
+        self,
+        previous_diagnosis_state: bool
+        ):
+        """
+        """
+        if previous_diagnosis_state and self.diagnosed:
+            pass
+        elif not previous_diagnosis_state and self.diagnosed:
+            self.vx = 0.
+            self.vy = 0.
+        elif previous_diagnosis_state and not self.diagnosed:
+            # Define velocity between (-vmax , +vmax)
+            self.vx, self.vy = 2. * self.__vmax * np.random.random_sample(dim) - self.__vmax
+        else:
+            # not previous_diagnosis_state and not self.diagnosed
+            pass
+
+
+    def hospitalization_function(
+        self,
+        previous_hospitalization_state: bool
+        ):
+        """
+        """
+        if previous_hospitalization_state and self.hospitalized:
+            pass
+        elif not previous_hospitalization_state and self.hospitalized:
+            self.vx = 0.
+            self.vy = 0.
+            self.x = 0.
+            self.y = 0.
+        elif previous_hospitalization_state and not self.hospitalized:
+            # Define velocity between (-vmax , +vmax)
+            self.vx, self.vy = 2. * self.__vmax * np.random.random_sample(dim) - self.__vmax
+        else:
+            # not previous_hospitalization_state and not self.hospitalized
+            pass

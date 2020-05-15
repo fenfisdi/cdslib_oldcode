@@ -14,7 +14,7 @@ from cdslib.agents.agent import determine_age_group
 #
 # hospitalization, UCI
 # Quarentine
-# Parallellization
+# Parallelization
 #
 # Movility profiles? ... Clases of Agents
 # Virus halo ... Probability density
