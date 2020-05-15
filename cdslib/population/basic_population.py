@@ -3,6 +3,9 @@ import time
 import numpy as np
 import pandas as pd
 from scipy import spatial
+
+from multiprocessing import Pool, Manager
+
 from cdslib.agents import AgentsInfo, Agent
 from cdslib.agents.agent import determine_age_group
 
@@ -31,10 +34,18 @@ class BasicPopulation:
         population_age_groups_info: dict,
         initial_population_number: int,
         initial_population_age_distribution: dict,
-        initial_population_distributions: dict
+        initial_population_distributions: dict,
+        n_processes: int=1
         ):
         """
         """
+        self.n_processes = n_processes
+
+        if self.n_processes > 1:
+            # self.parallel = Parallel(n_processes=self.n_processes)
+            self.pool = Pool(processes = n_processes)
+            self.manager = Manager()
+
         self.susceptibility_groups: list = susceptibility_group_list
 
         self.vulnerability_groups: list = vulnerability_group_list
@@ -264,7 +275,11 @@ class BasicPopulation:
         self.ymin: float = - vertical_length/2
 
         # Create list of agents
-        self.population: dict = {}
+        if self.n_processes == 1:
+            self.population: dict = {}
+        else:
+            self.population = self.manager.dict()
+
 
         for agent_index in range(self.initial_population_number):
 
@@ -308,8 +323,14 @@ class BasicPopulation:
         # and update diagnosis and hospitalization states
 
         # Cycle runs along all agents in current population
-        for agent_index in self.population.keys():
-            self.population[agent_index].disease_state_transition(self.dt)
+        if self.n_processes == 1:
+            for agent_index in self.population.keys():
+                self.population[agent_index].disease_state_transition(self.dt)
+        else:
+            self.pool.starmap(
+                    parallel_disease_state_transition,
+                    [agent_index for agent_index in self.population.keys()]
+                )
 
         #=============================================
         # Check dead agents
@@ -430,26 +451,67 @@ class BasicPopulation:
         # Create a dictionary for saving indices for agents of each state
         agents_indices_by_disease_state = {}
 
-        for disease_state in self.disease_states:
 
-            # Spatial tree to calculate distances fastly for agents of each state
-            points = [
-                [self.population[agent_index].x, self.population[agent_index].y]
-                for agent_index in self.population.keys()
-                if self.population[agent_index].disease_state == disease_state
-                ]
+        if self.n_processes == 1:
 
-            agents_indices = np.array([
-                agent_index
-                for agent_index in self.population.keys()
-                if self.population[agent_index].disease_state == disease_state
-                ])
+            for disease_state in self.disease_states:
 
-            spatial_trees_by_disease_state[disease_state] = \
-                spatial.KDTree(points) if len(points) is not 0 else None
+                spatial_trees_and_agents_indices(
+                    self.population,
+                    disease_state,
+                    spatial_trees_by_disease_state,
+                    agents_indices_by_disease_state
+                    )
 
-            agents_indices_by_disease_state[disease_state] = \
-                agents_indices if len(agents_indices) is not 0 else None
+        elif self.n_processes > len(self.disease_states):
+
+            pool = Pool(processes=len(self.disease_states))
+
+            parallel_spatial_trees_by_disease_state = self.manager.dict()
+            parallel_agents_indices_by_disease_state = self.manager.dict()
+
+            pool.starmap(
+                spatial_trees_and_agents_indices,
+                [
+                    (
+                        self.population,
+                        disease_state,
+                        parallel_spatial_trees_by_disease_state,
+                        parallel_agents_indices_by_disease_state
+                        )
+                    for disease_state in self.disease_states
+                    ]
+                )
+
+            spatial_trees_by_disease_state = \
+                parallel_spatial_trees_by_disease_state._getvalue()
+            agents_indices_by_disease_state = \
+                parallel_agents_indices_by_disease_state._getvalue()
+
+        else:
+            pool = Pool(processes=self.n_processes)
+
+            manager = Manager()
+            parallel_spatial_trees_by_disease_state = self.manager.dict()
+            parallel_agents_indices_by_disease_state = self.manager.dict()
+
+            pool.starmap(
+                spatial_trees_and_agents_indices,
+                [
+                    (
+                        self.population,
+                        disease_state,
+                        parallel_spatial_trees_by_disease_state,
+                        parallel_agents_indices_by_disease_state
+                        )
+                    for disease_state in self.disease_states
+                    ]
+                )
+
+            spatial_trees_by_disease_state = \
+                parallel_spatial_trees_by_disease_state._getvalue()
+            agents_indices_by_disease_state = \
+                parallel_agents_indices_by_disease_state._getvalue()
 
         return spatial_trees_by_disease_state, agents_indices_by_disease_state
 
@@ -482,15 +544,28 @@ class BasicPopulation:
         """
         """
         if not agent_dict:
-            # Cycle runs along all agents in current population
-            population_array = []
-            
-            for agent_index in self.population.keys():
-                agent_dict = self.population[agent_index].getstate()
-                agent_dict['step'] = self.step
+
+            if self.n_processes == 1:
+                # Cycle runs along all agents in current population
+                population_array = []
                 
-                population_array.append(agent_dict)
-            
+                for agent_index in self.population.keys():
+                    population_array.append(
+                        retrieve_agent_dict(
+                            self.population,
+                            agent_index,
+                            self.step
+                            )
+                        )
+            else:
+                population_array = self.pool.starmap(
+                    retrieve_agent_dict,
+                    [
+                        (self.population, agent_index, self.step)
+                        for agent_index in self.population.keys()
+                    ]
+                )
+
             self.agents_info_df = self.agents_info_df.append(
                 population_array,
                 ignore_index=True
@@ -503,3 +578,58 @@ class BasicPopulation:
                 agent_dict,
                 ignore_index=True
                 )
+
+#===============================================================================
+# In order to parallelize code
+
+def retrieve_agent_dict(
+    population,
+    agent_index: int,
+    step: int
+    ):
+    """
+    """
+    agent_dict = population[agent_index].getstate()
+    agent_dict['step'] = step
+
+    return agent_dict
+
+
+def spatial_trees_and_agents_indices(
+    population,
+    disease_state: str,
+    spatial_trees_by_disease_state,
+    agents_indices_by_disease_state
+    ):
+    """
+    """
+    # Spatial tree to calculate distances fastly for agents of each state
+    points = [
+        [population[agent_index].x, population[agent_index].y]
+        for agent_index in population.keys()
+        if population[agent_index].disease_state == disease_state
+        ]
+
+    agents_indices = np.array([
+        agent_index
+        for agent_index in population.keys()
+        if population[agent_index].disease_state == disease_state
+        ])
+
+    if len(points) is not 0:
+        spatial_trees_by_disease_state[disease_state] = spatial.KDTree(points)
+        agents_indices_by_disease_state[disease_state] = agents_indices
+    else:
+        spatial_trees_by_disease_state[disease_state] = None
+        agents_indices_by_disease_state[disease_state] = None
+
+
+def parallel_disease_state_transition(
+    self,
+    population,
+    agent_index: int,
+    dt: int,
+    ):
+    """
+    """
+    self.population[agent_index].disease_state_transition(self.dt)

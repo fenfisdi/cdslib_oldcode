@@ -8,29 +8,34 @@ from cdslib import BasicPopulation
 from cdslib import BasicPopulationGraphs
 
 def time_function_1():
-    Lambda = 5*6
+    Lambda = 20
     t = np.random.poisson(Lambda, 1)[0]
-    return t if t < 21*6 else 21*6
+    return t if t < 84 else 84
 
 def time_function_2():
-    Lambda = 10*6
+    Lambda = 40
     t = np.random.poisson(Lambda, 1)[0]
-    return t if t < 20*6 else 20*6
+    return t if t < 48 else 48
 
 def time_function_3():
-    Lambda = 14*6
-    t = np.random.poisson(Lambda, 1)[0]
-    return t if t < 20*6 else 20*6
+    mu, sigma = 48, 36 # mean and standard deviation
+    s = np.random.normal(mu, sigma, 1)[0]
+    return s if s < 184 else 184
 
 def time_function_4():
-    Lambda = 21*6
-    t = np.random.poisson(Lambda, 1)[0]
-    return t if t < 42*6 else 42*6
+    mu, sigma = 32, 24 # mean and standard deviation
+    s = np.random.normal(mu, sigma, 1)[0]
+    return s if s < 164 else 164
 
 def time_function_5():
-    Lambda = 10*6
+    mu, sigma = 44, 32 # mean and standard deviation
+    s = np.random.normal(mu, sigma, 1)[0]
+    return s if s < 144 else 144
+
+def time_function_6():
+    Lambda = 8
     t = np.random.poisson(Lambda, 1)[0]
-    return t if t < 15*6 else 15*6
+    return t if t < 12 else 12
 
 if __name__ == "__main__":
 
@@ -54,6 +59,7 @@ if __name__ == "__main__":
         'exposed',
         'asymptomatic',
         'mildly-ill',
+        'moderate-ill',
         'seriously-ill',
         'recovered',
         'inmune',
@@ -61,7 +67,6 @@ if __name__ == "__main__":
         ]
 
     susceptibility_groups = [
-        'mildly-susceptible',
         'highly-susceptible'
         ]
 
@@ -85,11 +90,14 @@ if __name__ == "__main__":
                 'mildly-ill': {
                     'time_function': time_function_3
                     },
-                'seriously-ill': {
+                'moderate-ill': {
                     'time_function': time_function_4
                     },
-                'recovered': {
+                'seriously-ill': {
                     'time_function': time_function_5
+                    },
+                'recovered': {
+                    'time_function': time_function_6
                     },
                 'inmune': {
                     'time_function': None
@@ -111,11 +119,14 @@ if __name__ == "__main__":
                 'mildly-ill': {
                     'time_function': time_function_3
                     },
-                'seriously-ill': {
+                'moderate-ill': {
                     'time_function': time_function_4
                     },
-                'recovered': {
+                'seriously-ill': {
                     'time_function': time_function_5
+                    },
+                'recovered': {
+                    'time_function': time_function_6
                     },
                 'inmune': {
                     'time_function': None
@@ -132,8 +143,9 @@ if __name__ == "__main__":
             'asymptomatic': 2,
             'recovered': 2,
             'mildly-ill': 3,
-            'seriously-ill': 4,
-            'dead': 5
+            'moderate-ill': 4,
+            'seriously-ill': 5,
+            'dead': 6
             },
         'disease_states_transitions_by_vulnerability_group': {
             'not-vulnerable': {
@@ -142,24 +154,28 @@ if __name__ == "__main__":
                     'transition_probability': None
                     },
                 'exposed': {
-                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.60, 0.25, 0.15]
+                    'becomes_into': ['asymptomatic', 'mildly-ill', 'moderate-ill', 'seriously-ill'],
+                    'transition_probability': [0.01, 0.80, 0.13, 0.06]
                     },
                 'asymptomatic': {
-                    'becomes_into': ['inmune', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.75, 0.20, 0.05]
+                    'becomes_into': ['inmune'],
+                    'transition_probability': [1.0]
                     },
                 'mildly-ill': {
-                    'becomes_into': ['seriously-ill', 'recovered'],
-                    'transition_probability': [0.20, 0.80]
+                    'becomes_into': ['recovered', 'moderate-ill', 'seriously-ill', 'dead'],
+                    'transition_probability': [0.90, 0.05, 0.03, 0.02]
+                    },
+                'moderate-ill': {
+                    'becomes_into': ['recovered', 'mildly-ill', 'seriously-ill', 'dead'],
+                    'transition_probability': [0.30, 0.50, 0.15, 0.05]
                     },
                 'seriously-ill': {
-                    'becomes_into': ['recovered', 'dead'],
-                    'transition_probability': [0.95, 0.05]
+                    'becomes_into': ['recovered', 'mildly-ill', 'moderate-ill', 'dead'],
+                    'transition_probability': [0.30, 0.20, 0.20, 0.30]
                     },
                 'recovered': {
-                    'becomes_into': ['mildly-ill', 'seriously-ill', 'inmune'],
-                    'transition_probability': [0.07, 0.03, 0.90]
+                    'becomes_into': ['inmune'],
+                    'transition_probability': [1.0]
                     },
                 'inmune': {
                     'becomes_into': None,
@@ -176,24 +192,28 @@ if __name__ == "__main__":
                     'transition_probability': None
                     },
                 'exposed': {
-                    'becomes_into': ['asymptomatic', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.15, 0.25, 0.60]
+                    'becomes_into': ['asymptomatic', 'mildly-ill', 'moderate-ill', 'seriously-ill'],
+                    'transition_probability': [0.01, 0.80, 0.13, 0.06]
                     },
                 'asymptomatic': {
-                    'becomes_into': ['inmune', 'mildly-ill', 'seriously-ill'],
-                    'transition_probability': [0.05, 0.20, 0.75]
+                    'becomes_into': ['inmune'],
+                    'transition_probability': [1.0]
                     },
                 'mildly-ill': {
-                    'becomes_into': ['seriously-ill', 'recovered'],
-                    'transition_probability': [0.80, 0.20]
+                    'becomes_into': ['recovered', 'moderate-ill', 'seriously-ill', 'dead'],
+                    'transition_probability': [0.70, 0.10, 0.08, 0.01]
+                    },
+                'moderate-ill': {
+                    'becomes_into': ['recovered', 'mildly-ill', 'seriously-ill', 'dead'],
+                    'transition_probability': [0.15, 0.35, 0.20, 0.30]
                     },
                 'seriously-ill': {
-                    'becomes_into': ['recovered', 'dead'],
-                    'transition_probability': [0.20, 0.80]
+                    'becomes_into': ['recovered', 'mildly-ill', 'moderate-ill', 'dead'],
+                    'transition_probability': [0.20, 0.08, 0.12, 0.60]
                     },
                 'recovered': {
-                    'becomes_into': ['mildly-ill', 'seriously-ill', 'inmune'],
-                    'transition_probability': [0.15, 0.15, 0.70]
+                    'becomes_into': ['inmune'],
+                    'transition_probability': [1.0]
                     },
                 'inmune': {
                     'becomes_into': None,
@@ -212,7 +232,6 @@ if __name__ == "__main__":
 
     contagion_dynamics_info = {
         'contagion_probabilities_by_susceptibility_groups': {
-            'mildly-susceptible': 0.5,
             'highly-susceptible': 0.9
             },
         'criticality_level_of_disease_states_to_susceptibility_to_contagion': {
@@ -222,6 +241,7 @@ if __name__ == "__main__":
             'asymptomatic': 0,
             'recovered': 0,
             'mildly-ill': 0,
+            'moderate-ill': 0,
             'seriously-ill': 0,
             'dead': 0
             },
@@ -271,36 +291,43 @@ if __name__ == "__main__":
                 'can_get_infected': False,
                 'is_infected': True,
                 'can_spread': True,
-                'spread_radius': 3.0,
-                'spread_probability': 0.4
+                'spread_radius': 1.0,
+                'spread_probability': 0.01
                 },
             'asymptomatic': {
                 'can_get_infected': False,
                 'is_infected': True,
                 'can_spread': True,
-                'spread_radius': 3.0,
-                'spread_probability': 0.6
+                'spread_radius': 1.0,
+                'spread_probability': 0.01
                 },
             'mildly-ill': {
                 'can_get_infected': False,
                 'is_infected': True,
                 'can_spread': True,
-                'spread_radius': 3.0,
-                'spread_probability': 0.8
+                'spread_radius': 1.0,
+                'spread_probability': 0.015
+                },
+            'moderate-ill': {
+                'can_get_infected': False,
+                'is_infected': True,
+                'can_spread': True,
+                'spread_radius': 1.0,
+                'spread_probability': 0.01
                 },
             'seriously-ill': {
                 'can_get_infected': False,
                 'is_infected': True,
                 'can_spread': True,
-                'spread_radius': 3.0,
-                'spread_probability': 0.8
+                'spread_radius': 1.0,
+                'spread_probability': 0.01
                 },
             'recovered': {
                 'can_get_infected': False,
                 'is_infected': True,
                 'can_spread': True,
-                'spread_radius': 3.0,
-                'spread_probability': 0.4
+                'spread_radius': 1.0,
+                'spread_probability': 0.01
                 },
             'inmune': {
                 'can_get_infected': False,
@@ -327,37 +354,37 @@ if __name__ == "__main__":
         'child': {
             'min_age': 0,
             'max_age': 9,
-            'mortality_probability': dt_scale_in_years* 1.7/1000.
+            'mortality_probability': 1.19e-6
             },
         'teenager': {
             'min_age': 10,
             'max_age': 19,
-            'mortality_probability': dt_scale_in_years* 1.4/1000.
+            'mortality_probability': 9.8e-7
             },
         'vicenarian': {
             'min_age': 20,
             'max_age': 29,
-            'mortality_probability': dt_scale_in_years* 3.4/1000.
+            'mortality_probability': 2.38e-6
             },
         'tricenarian': {
             'min_age': 30,
             'max_age': 39,
-            'mortality_probability': dt_scale_in_years* 3.1/1000.
+            'mortality_probability': 2.17e-6
             },
         'quadragenarian': {
             'min_age': 40,
             'max_age': 49,
-            'mortality_probability': dt_scale_in_years* 3.7/1000.
+            'mortality_probability': 2.59e-6
             },
         'quinquagenarian': {
             'min_age': 50,
             'max_age': 59,
-            'mortality_probability': dt_scale_in_years* 7.2/1000.
+            'mortality_probability': 5.04e-6
             },
         'sexagenarian': {
             'min_age': 60,
             'max_age': None,
-            'mortality_probability': dt_scale_in_years* 40.9/1000.
+            'mortality_probability': 3.07e-5
             }
         }
 
@@ -372,22 +399,27 @@ if __name__ == "__main__":
                 },
             'exposed': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 5*6,
+                'diagnosis_time': 11*4,
                 'diagnosis_probability': 0.20
                 },
             'asymptomatic': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 5*6,
+                'diagnosis_time': 11*4,
                 'diagnosis_probability': 0.20
                 },
             'mildly-ill': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 5*6,
+                'diagnosis_time': 11*4,
+                'diagnosis_probability': 0.10
+                },
+            'moderate-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 11*4,
                 'diagnosis_probability': 0.10
                 },
             'seriously-ill': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 2*6,
+                'diagnosis_time': 11*4,
                 'diagnosis_probability': 0.95
                 },
             'recovered': {
@@ -414,22 +446,27 @@ if __name__ == "__main__":
                 },
             'exposed': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 3*6,
-                'diagnosis_probability': 0.40
+                'diagnosis_time': 11*4,
+                'diagnosis_probability': 0.20
                 },
             'asymptomatic': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 3*6,
-                'diagnosis_probability': 0.40
+                'diagnosis_time': 11*4,
+                'diagnosis_probability': 0.20
                 },
             'mildly-ill': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 3*6,
-                'diagnosis_probability': 0.20
+                'diagnosis_time': 11*4,
+                'diagnosis_probability': 0.10
+                },
+            'moderate-ill': {
+                'can_be_diagnosed': True,
+                'diagnosis_time': 11*4,
+                'diagnosis_probability': 0.10
                 },
             'seriously-ill': {
                 'can_be_diagnosed': True,
-                'diagnosis_time': 2*6,
+                'diagnosis_time': 11*4,
                 'diagnosis_probability': 0.95
                 },
             'recovered': {
@@ -489,14 +526,19 @@ if __name__ == "__main__":
                     'UCI_probability': None
                     },
                 'mildly-ill': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'moderate-ill': {
                     'can_be_hospitalized': True,
-                    'hospitalization_probability': 0.05,
+                    'hospitalization_probability': 1.0,
                     'UCI_probability': 0.0
                     },
                 'seriously-ill': {
                     'can_be_hospitalized': True,
-                    'hospitalization_probability': 1.0,
-                    'UCI_probability': 0.10
+                    'hospitalization_probability': 0.0,
+                    'UCI_probability': 1.0
                     },
                 'recovered': {
                     'can_be_hospitalized': False,
@@ -531,14 +573,19 @@ if __name__ == "__main__":
                     'UCI_probability': None
                     },
                 'mildly-ill': {
+                    'can_be_hospitalized': False,
+                    'hospitalization_probability': None,
+                    'UCI_probability': None
+                    },
+                'moderate-ill': {
                     'can_be_hospitalized': True,
-                    'hospitalization_probability': 0.30,
+                    'hospitalization_probability': 1.0,
                     'UCI_probability': 0.0
                     },
                 'seriously-ill': {
                     'can_be_hospitalized': True,
-                    'hospitalization_probability': 1.0,
-                    'UCI_probability': 0.50
+                    'hospitalization_probability': 0.0,
+                    'UCI_probability': 1.0
                     },
                 'recovered': {
                     'can_be_hospitalized': False,
@@ -582,6 +629,10 @@ if __name__ == "__main__":
                     'should_be_alert': True,
                     'alertness_probability': 0.20
                     },
+                'moderate-ill': {
+                    'should_be_alert': True,
+                    'alertness_probability': 0.20
+                    },
                 'seriously-ill': {
                     'should_be_alert': False,
                     'alertness_probability': None
@@ -613,6 +664,10 @@ if __name__ == "__main__":
                     'alertness_probability': 0.80
                     },
                 'mildly-ill': {
+                    'should_be_alert': True,
+                    'alertness_probability': 0.80
+                    },
+                'moderate-ill': {
                     'should_be_alert': True,
                     'alertness_probability': 0.80
                     },
@@ -656,6 +711,10 @@ if __name__ == "__main__":
                     'avoidable_agent': True,
                     'avoidness_radius': 1.0
                     },
+                'moderate-ill': {
+                    'avoidable_agent': True,
+                    'avoidness_radius': 1.0
+                    },
                 'seriously-ill': {
                     'avoidable_agent': True,
                     'avoidness_radius': 3.0
@@ -687,6 +746,10 @@ if __name__ == "__main__":
                     'avoidness_radius': 1.0
                     },
                 'mildly-ill': {
+                    'avoidable_agent': True,
+                    'avoidness_radius': 2.0
+                    },
+                'moderate-ill': {
                     'avoidable_agent': True,
                     'avoidness_radius': 2.0
                     },
@@ -728,7 +791,32 @@ if __name__ == "__main__":
     #===========================================================================
     # Information needed for BasicPopulation class
 
-    initial_population_number = 20
+    # Medellin density = 0.00664339 hab/m2
+
+    # 0.006503642 hab/m2
+    # initial_population_number = 1000000
+    # horizontal_length = 12400
+    # vertical_length = 12400
+
+    # 0.006574622 hab/m2
+    # initial_population_number = 100000
+    # horizontal_length = 3900
+    # vertical_length = 3900
+
+    # 0.006503642 hab/m2
+    # initial_population_number = 10000
+    # horizontal_length = 1240
+    # vertical_length = 1240
+
+    # 0.006574622 hab/m2
+    initial_population_number = 1000
+    horizontal_length = 390
+    vertical_length = 390
+
+    # 0.006503642 hab/m2
+    # initial_population_number = 100
+    # horizontal_length = 124
+    # vertical_length = 124
 
     initial_population_age_distribution = {
         'child': 0.10,
@@ -743,63 +831,56 @@ if __name__ == "__main__":
     initial_population_distributions = {
         'age_group/susceptibility_group': {
             'child': {
-                'mildly-susceptible': 0.80,
-                'highly-susceptible': 0.20,
+                'highly-susceptible': 1.0,
                 },
             'teenager': {
-                'mildly-susceptible': 0.50,
-                'highly-susceptible': 0.50,
+                'highly-susceptible': 1.0
                 },
             'vicenarian': {
-                'mildly-susceptible': 0.10,
-                'highly-susceptible': 0.90,
+                'highly-susceptible': 1.0,
                 },
             'tricenarian': {
-                'mildly-susceptible': 0.10,
-                'highly-susceptible': 0.90,
+                'highly-susceptible': 1.0,
                 },
             'quadragenarian': {
-                'mildly-susceptible': 0.10,
-                'highly-susceptible': 0.90,
+                'highly-susceptible': 1.0,
                 },
             'quinquagenarian': {
-                'mildly-susceptible': 0.10,
-                'highly-susceptible': 0.90,
+                'highly-susceptible': 1.0,
                 },
             'sexagenarian': {
-                'mildly-susceptible': 0.10,
-                'highly-susceptible': 0.90,
+                'highly-susceptible': 1.0,
                 },
             },
         'age_group/vulnerability_group': {
             'child': {
-                'not-vulnerable': 0.99,
-                'vulnerable': 0.01
-                },
-            'teenager': {
-                'not-vulnerable': 0.98,
-                'vulnerable': 0.02
-                },
-            'vicenarian': {
                 'not-vulnerable': 0.95,
                 'vulnerable': 0.05
                 },
-            'tricenarian': {
+            'teenager': {
                 'not-vulnerable': 0.90,
                 'vulnerable': 0.10
                 },
+            'vicenarian': {
+                'not-vulnerable': 0.80,
+                'vulnerable': 0.20
+                },
+            'tricenarian': {
+                'not-vulnerable': 0.80,
+                'vulnerable': 0.20
+                },
             'quadragenarian': {
-                'not-vulnerable': 0.80,
-                'vulnerable': 0.20
-                },
-            'quinquagenarian': {
-                'not-vulnerable': 0.80,
-                'vulnerable': 0.20
-                },
-            'sexagenarian': {
                 'not-vulnerable': 0.75,
                 'vulnerable': 0.25
                 },
+            'quinquagenarian': {
+                'not-vulnerable': 0.65,
+                'vulnerable': 0.35
+                },
+            'sexagenarian': {
+                'not-vulnerable': 0.60,
+                'vulnerable': 0.40
+                }
             },
         'age_group/vulnerability_group/disease_state': {
             'child': {
@@ -808,6 +889,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -818,6 +900,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -828,18 +911,20 @@ if __name__ == "__main__":
                 'not-vulnerable': {
                     'susceptible': 0.90,
                     'exposed': 0.00,
-                    'asymptomatic': 0.10,
-                    'mildly-ill': 0.00,
+                    'asymptomatic': 0.05,
+                    'mildly-ill': 0.05,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
                     },
                 'vulnerable': {
-                    'susceptible': 0.90,
-                    'exposed': 0.10,
+                    'susceptible': 1.00,
+                    'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -852,6 +937,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -862,6 +948,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -874,6 +961,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -884,6 +972,7 @@ if __name__ == "__main__":
                     'exposed': 0.00,
                     'asymptomatic': 0.00,
                     'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
                     'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
@@ -892,21 +981,23 @@ if __name__ == "__main__":
                 },
             'quadragenarian': {
                 'not-vulnerable': {
-                    'susceptible': 0.80,
-                    'exposed': 0.00,
-                    'asymptomatic': 0.10,
+                    'susceptible': 0.90,
+                    'exposed': 0.05,
+                    'asymptomatic': 0.00,
                     'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
                     },
                 'vulnerable': {
-                    'susceptible': 0.80,
-                    'exposed': 0.00,
-                    'asymptomatic': 0.10,
+                    'susceptible': 0.90,
+                    'exposed': 0.05,
+                    'asymptomatic': 0.00,
                     'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
@@ -914,21 +1005,23 @@ if __name__ == "__main__":
                 },
             'quinquagenarian': {
                 'not-vulnerable': {
-                    'susceptible': 0.80,
-                    'exposed': 0.00,
-                    'asymptomatic': 0.10,
-                    'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'susceptible': 0.95,
+                    'exposed': 0.05,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
                     },
                 'vulnerable': {
-                    'susceptible': 0.80,
-                    'exposed': 0.00,
-                    'asymptomatic': 0.10,
-                    'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'susceptible': 0.95,
+                    'exposed': 0.05,
+                    'asymptomatic': 0.00,
+                    'mildly-ill': 0.00,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
@@ -936,21 +1029,23 @@ if __name__ == "__main__":
                 },
             'sexagenarian': {
                 'not-vulnerable': {
-                    'susceptible': 0.80,
+                    'susceptible': 0.95,
                     'exposed': 0.00,
-                    'asymptomatic': 0.10,
+                    'asymptomatic': 0.00,
                     'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
                     },
                 'vulnerable': {
-                    'susceptible': 0.80,
+                    'susceptible': 0.95,
                     'exposed': 0.00,
-                    'asymptomatic': 0.10,
+                    'asymptomatic': 0.00,
                     'mildly-ill': 0.05,
-                    'seriously-ill': 0.05,
+                    'moderate-ill': 0.00,
+                    'seriously-ill': 0.00,
                     'recovered': 0.00,
                     'inmune': 0.00,
                     'dead': 0.00
@@ -971,15 +1066,12 @@ if __name__ == "__main__":
         population_age_groups_info=population_age_groups_info,
         initial_population_number=initial_population_number,
         initial_population_age_distribution=initial_population_age_distribution,
-        initial_population_distributions=initial_population_distributions
+        initial_population_distributions=initial_population_distributions,
+        n_processes=1
         )
 
     #===========================================================================
     # Create population
-
-    horizontal_length = 100
-
-    vertical_length = 100
 
     maximum_speed = 1.0 
 
@@ -998,7 +1090,7 @@ if __name__ == "__main__":
     # Evolve population
     start_time = time.time()
 
-    for i in range(300):
+    for i in range(120):
         basic_population.evolve_population()
 
     end_time = time.time()
@@ -1033,6 +1125,7 @@ if __name__ == "__main__":
     exposed_color = px.colors.qualitative.D3[0]    # dark_blue
     asymptomatic_color = px.colors.qualitative.D3[3]     # dark_red
     mildly_ill_color = px.colors.qualitative.D3[1]  # dark_orange
+    moderate_ill_color = px.colors.qualitative.Alphabet[18]  # cyan
     seriously_ill_color = px.colors.qualitative.G10[4] # dark_purple
     recovered_color = px.colors.qualitative.D3[7]    # dark_gray
     inmune_color = px.colors.qualitative.Dark2[5]   # dark yellow
@@ -1060,6 +1153,11 @@ if __name__ == "__main__":
             opacity=agent_opacity
             ),
         'mildly-ill': dict(
+            color=mildly_ill_color,
+            size=agent_size,
+            opacity=agent_opacity
+            ),
+        'moderate-ill': dict(
             color=mildly_ill_color,
             size=agent_size,
             opacity=agent_opacity
@@ -1097,6 +1195,9 @@ if __name__ == "__main__":
             color=asymptomatic_color
             ),
         'mildly-ill': dict(
+            color=mildly_ill_color
+            ),
+        'moderate-ill': dict(
             color=mildly_ill_color
             ),
         'seriously-ill': dict(
