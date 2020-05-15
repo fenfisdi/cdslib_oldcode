@@ -1090,7 +1090,7 @@ if __name__ == "__main__":
     # Evolve population
     start_time = time.time()
 
-    for i in range(120):
+    for i in range(10):
         basic_population.evolve_population()
 
     end_time = time.time()
