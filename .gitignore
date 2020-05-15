@@ -2,6 +2,12 @@
 COVID-19_example/pruebas
 COVID-19_example/multiprocessing.ipynb
 
+# Results
+*.sh
+*.tar.gz
+*.csv
+
+
 # Notebook Checkpoints
 .ipynb_checkpoints
 
