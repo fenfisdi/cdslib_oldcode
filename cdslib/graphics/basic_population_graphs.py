@@ -1,10 +1,12 @@
 import plotly.express as px
 import plotly.graph_objects as go
 from cdslib.population import BasicPopulation
+from cdslib.agents import AgentsInfo
 
 class BasicPopulationGraphs:
     def __init__(
         self,
+        agents_info: AgentsInfo,
         basic_population: BasicPopulation,
         agent_marker_line_width: int,
         natural_death: str,
@@ -18,7 +20,11 @@ class BasicPopulationGraphs:
         """
         """
         self.agents_info_df = basic_population.agents_info_df
-        self.step = basic_population.step
+
+        self.disease_states = agents_info.disease_states
+        self.dynamics_of_disease_states_contagion = \
+            agents_info.dynamics_of_disease_states_contagion
+
         self.xmin = basic_population.xmin 
         self.xmax = basic_population.xmax
         self.ymin = basic_population.ymin
@@ -351,9 +357,7 @@ class BasicPopulationGraphs:
 
         if mode == 'states':
 
-            df = self.agents_info_df.loc[
-                self.agents_info_df['live_state'] == 'alive' 
-                ][['step', 'agent', 'disease_state']].groupby(
+            df = self.agents_info_df[['step', 'agent', 'disease_state']].groupby(
                     ['step', 'disease_state'],
                     as_index=False
                     ).count().copy()
@@ -382,21 +386,28 @@ class BasicPopulationGraphs:
                 )
 
             fig.update_xaxes(rangeslider_visible=True)
-            
+            fig.update_yaxes(autorange=True, fixedrange=False)
+
             fig.update_layout(hovermode='x unified')
 
             fig.show()
 
         if mode == 'infection':
+            infected_states_map = {
+                state: (state \
+                if not self.dynamics_of_disease_states_contagion[state]['is_infected'] \
+                else 'infected')
+                for state in self.disease_states
+            }
+
             infection_df = self.agents_info_df.copy()
 
-            infection_df['infection_state'] = func(
-                infection_df['disease_state'].to_list()
-                )
+            infection_df['infection_state'] = [
+                infected_states_map[state]
+                for state in infection_df['disease_state'].to_list()
+                ]
 
-            df = infection_df.loc[
-                infection_df['live_state'] == 'alive' 
-                ][['step', 'agent', 'infection_state']].groupby(
+            df = infection_df[['step', 'agent', 'infection_state']].groupby(
                     ['step', 'infection_state'],
                     as_index=False
                     ).count().copy()
@@ -425,17 +436,8 @@ class BasicPopulationGraphs:
                 )
 
             fig.update_xaxes(rangeslider_visible=True)
+            fig.update_yaxes(autorange=True, fixedrange=False)
             
             fig.update_layout(hovermode='x unified')
 
             fig.show()
-
-def func(series):
-    new_series = []
-    for x in series:
-        if x == 'susceptible':
-            new_series.append(x)
-        else:
-            new_series.append('infected')
-
-    return new_series

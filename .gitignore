@@ -6,6 +6,8 @@ COVID-19_example/multiprocessing.ipynb
 *.sh
 *.tar.gz
 *.csv
+*.pdf
+*.wsl
 
 
 # Notebook Checkpoints

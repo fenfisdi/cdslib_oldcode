@@ -171,7 +171,7 @@ class Agent:
 
         self.diagnosed: bool = diagnosed
 
-        self.hospitalized: bool = False
+        self.is_hospitalized: bool = False
 
         self.is_in_UCI: bool = False
 
@@ -255,7 +255,7 @@ class Agent:
         self.disease_state_time += dt
 
         if (self.disease_state_max_time
-        and self.disease_state_time == self.disease_state_max_time):
+        and self.disease_state_time >= self.disease_state_max_time):
 
             # Verify: becomes into ? ... Throw the dice
             dice = np.random.random_sample()
@@ -290,7 +290,7 @@ class Agent:
                         self.update_diagnosis_state(dt, the_state_changed=True)
                         self.individual_quarantine_function(previous_diagnosis_state)
 
-                        previous_hospitalization_state = self.hospitalized
+                        previous_hospitalization_state = self.is_hospitalized
                         self.update_hospitalization_state()
                         self.hospitalization_function(previous_hospitalization_state)
 
@@ -305,7 +305,7 @@ class Agent:
             self.update_diagnosis_state(dt, the_state_changed=False)
             self.individual_quarantine_function(previous_diagnosis_state)
 
-            previous_hospitalization_state = self.hospitalized
+            previous_hospitalization_state = self.is_hospitalized
             self.update_hospitalization_state()
             self.hospitalization_function(previous_hospitalization_state)
 
@@ -530,7 +530,7 @@ class Agent:
                     # Increment time waiting diagnosis
                     self.time_waiting_diagnosis += dt
 
-                    if self.time_waiting_diagnosis == \
+                    if self.time_waiting_diagnosis >= \
                     self.__diagnosis_of_disease_states_by_vulnerability_group[
                     self.vulnerability_group][self.disease_state]['diagnosis_time']:
 
@@ -560,11 +560,11 @@ class Agent:
     def update_hospitalization_state(self):
         """
         """
-        # Agent can be hospitalized ?
+        # Agent could be hospitalized ?
         if self.__hospitalization_of_disease_states_by_vulnerability_group[
-        self.vulnerability_group][self.disease_state]['can_be_hospitalized']:
+        self.vulnerability_group][self.disease_state]['could_be_hospitalized']:
 
-            if not self.hospitalized:
+            if not self.is_hospitalized:
 
                 #=============================================
                 # Verify: is hospitalized ? ... Throw the dice
@@ -576,7 +576,7 @@ class Agent:
 
                     # Agent is hospitalized !!!
                     # TODO change to "needs_hospitalization"
-                    self.hospitalized = True
+                    self.is_hospitalized = True
 
                     #=============================================
                     # Verify: needs UCI ? ... Throw the dice
@@ -606,8 +606,8 @@ class Agent:
                         # Agent needs UCI !!!
                         self.is_in_UCI = True
         else:
-            # Agent can not be hospitalized ?
-            self.hospitalized = False
+            # Agent could not be hospitalized ?
+            self.is_hospitalized = False
 
             self.is_in_UCI = False
 
@@ -634,6 +634,9 @@ class Agent:
             
             # Retrieve agent location
             agent_location = [self.x, self.y]
+
+            # Initialize "contadted with"
+            contacted_with = []
 
             # Initialize "alerted by"
             alerted_by = []
@@ -729,151 +732,152 @@ class Agent:
         ):
         """
         """
-        #=============================================
-        # Starting parameters
+        if not self.is_hospitalized:
+            #=============================================
+            # Starting parameters
 
-        # Avoid numerical issues when cosine tends to 1
-        epsilon = 0.002
+            # Avoid numerical issues when cosine tends to 1
+            epsilon = 0.002
 
-        # 0.349066  = 20° you can set the range of final random angular deviation
-        random_rotation_angle_range = 0.349066
+            # 0.349066  = 20° you can set the range of final random angular deviation
+            random_rotation_angle_range = 0.349066
 
-        random_rotation_angle = np.random.uniform(
-            -random_rotation_angle_range,
-            random_rotation_angle_range
-            )
-
-        velocity_changed = False
-
-        #=============================================
-        # Retrieve own velocity and position
-
-        own_initial_position = np.array([self.x, self.y])
-
-        own_initial_velocity = np.array([self.vx, self.vy])
-
-        norm_own_initial_velocity = np.sqrt(
-            np.dot(own_initial_velocity, own_initial_velocity)
-            )
-
-        #=============================================
-        # Create a vector to save new velocity vector
-        new_velocity = np.array([0., 0.], dtype='float64')
-
-        #=============================================
-        # Avoid velocities and positions
-        for (position_to_avoid, velocity_to_avoid) in zip(
-            positions_to_avoid,
-            velocities_to_avoid
-            ):
-
-            # Locate the avoidable agents position
-            relative_position_vector = position_to_avoid - own_initial_position
-
-            relative_position_vector_norm = np.sqrt(
-                np.dot(relative_position_vector, relative_position_vector)
+            random_rotation_angle = np.random.uniform(
+                -random_rotation_angle_range,
+                random_rotation_angle_range
                 )
 
-            velocity_to_avoid_norm = np.sqrt(
-                np.dot(velocity_to_avoid, velocity_to_avoid)
+            velocity_changed = False
+
+            #=============================================
+            # Retrieve own velocity and position
+
+            own_initial_position = np.array([self.x, self.y])
+
+            own_initial_velocity = np.array([self.vx, self.vy])
+
+            norm_own_initial_velocity = np.sqrt(
+                np.dot(own_initial_velocity, own_initial_velocity)
                 )
 
-            # alpha: angle between agent velocity and
-            #        relative_position_vector of avoidable agent
-            # beta: angle between - relative_position
-            #       and avoidable agent velocity
-            # theta: angle between agents velocities
+            #=============================================
+            # Create a vector to save new velocity vector
+            new_velocity = np.array([0., 0.], dtype='float64')
 
-            cosalpha = \
-                np.dot(relative_position_vector, own_initial_velocity) \
-                    / (relative_position_vector_norm * norm_own_initial_velocity)
+            #=============================================
+            # Avoid velocities and positions
+            for (position_to_avoid, velocity_to_avoid) in zip(
+                positions_to_avoid,
+                velocities_to_avoid
+                ):
 
-            cosalpha = 1.0 \
-                if cosalpha > 1.0 else (-1.0 if cosalpha < -1.0 else cosalpha)
+                # Locate the avoidable agents position
+                relative_position_vector = position_to_avoid - own_initial_position
 
-            if velocity_to_avoid_norm != 0.:
-                # If avoidable agent isn't at rest
-                costheta = \
-                    np.dot(own_initial_velocity, velocity_to_avoid) \
-                        / (norm_own_initial_velocity * velocity_to_avoid_norm)
+                relative_position_vector_norm = np.sqrt(
+                    np.dot(relative_position_vector, relative_position_vector)
+                    )
 
-                costheta = 1.0 \
-                    if costheta > 1.0 else (-1.0 if costheta < -1.0 else costheta)
+                velocity_to_avoid_norm = np.sqrt(
+                    np.dot(velocity_to_avoid, velocity_to_avoid)
+                    )
 
-                cosbeta = \
-                    np.dot(-relative_position_vector, velocity_to_avoid) \
-                        / (relative_position_vector_norm * velocity_to_avoid_norm)
-                cosbeta = 1.0 \
-                    if cosbeta > 1.0 else (-1.0 if cosbeta < -1.0 else cosbeta)
+                # alpha: angle between agent velocity and
+                #        relative_position_vector of avoidable agent
+                # beta: angle between - relative_position
+                #       and avoidable agent velocity
+                # theta: angle between agents velocities
 
-                if (cosbeta <= (1.0 - epsilon)
-                    and cosbeta >= (-1.0 + epsilon)
-                    ):
-                    # if beta is not 0 or pi
-                    # define the perpendicular direction to
-                    # the avoidable agent velocity
-                    new_direction = \
-                        np.dot(relative_position_vector, velocity_to_avoid) \
-                        * velocity_to_avoid \
-                        - velocity_to_avoid_norm**2 * relative_position_vector
+                cosalpha = \
+                    np.dot(relative_position_vector, own_initial_velocity) \
+                        / (relative_position_vector_norm * norm_own_initial_velocity)
 
-                    new_direction_normalized = \
-                        new_direction \
-                            / np.sqrt(np.dot(new_direction, new_direction))
+                cosalpha = 1.0 \
+                    if cosalpha > 1.0 else (-1.0 if cosalpha < -1.0 else cosalpha)
 
-                else:
-                    new_direction_normalized = \
-                        np.array([velocity_to_avoid[1], - velocity_to_avoid[0]])\
-                            / velocity_to_avoid_norm
+                if velocity_to_avoid_norm != 0.:
+                    # If avoidable agent isn't at rest
+                    costheta = \
+                        np.dot(own_initial_velocity, velocity_to_avoid) \
+                            / (norm_own_initial_velocity * velocity_to_avoid_norm)
 
-                # Including a random deviation
-                new_direction_rotated = np.array([(new_direction_normalized[0]*np.cos(random_rotation_angle) -
-                                                   new_direction_normalized[1]*np.sin(random_rotation_angle))
-                                                  ,(new_direction_normalized[0]*np.sin(random_rotation_angle) + new_direction_normalized[1]*np.cos(random_rotation_angle))])
+                    costheta = 1.0 \
+                        if costheta > 1.0 else (-1.0 if costheta < -1.0 else costheta)
 
-                if (-1. <= cosalpha <= 0.):
-                    # Avoidable agent is at agents back, pi<alpha<3pi/2
-                    # If avoidable agent can reach agent trajectory,
-                    # agent changes its direction
-                    if velocity_to_avoid_norm >= norm_own_initial_velocity:
+                    cosbeta = \
+                        np.dot(-relative_position_vector, velocity_to_avoid) \
+                            / (relative_position_vector_norm * velocity_to_avoid_norm)
+                    cosbeta = 1.0 \
+                        if cosbeta > 1.0 else (-1.0 if cosbeta < -1.0 else cosbeta)
 
-                        if (cosbeta >= -cosalpha and costheta >= -cosalpha):
-                            new_velocity += norm_own_initial_velocity * new_direction_rotated
-                            velocity_changed = True
-                
-                        else: # If both agents can't intersect
+                    if (cosbeta <= (1.0 - epsilon)
+                        and cosbeta >= (-1.0 + epsilon)
+                        ):
+                        # if beta is not 0 or pi
+                        # define the perpendicular direction to
+                        # the avoidable agent velocity
+                        new_direction = \
+                            np.dot(relative_position_vector, velocity_to_avoid) \
+                            * velocity_to_avoid \
+                            - velocity_to_avoid_norm**2 * relative_position_vector
+
+                        new_direction_normalized = \
+                            new_direction \
+                                / np.sqrt(np.dot(new_direction, new_direction))
+
+                    else:
+                        new_direction_normalized = \
+                            np.array([velocity_to_avoid[1], - velocity_to_avoid[0]])\
+                                / velocity_to_avoid_norm
+
+                    # Including a random deviation
+                    new_direction_rotated = np.array([(new_direction_normalized[0]*np.cos(random_rotation_angle) -
+                                                    new_direction_normalized[1]*np.sin(random_rotation_angle))
+                                                    ,(new_direction_normalized[0]*np.sin(random_rotation_angle) + new_direction_normalized[1]*np.cos(random_rotation_angle))])
+
+                    if (-1. <= cosalpha <= 0.):
+                        # Avoidable agent is at agents back, pi<alpha<3pi/2
+                        # If avoidable agent can reach agent trajectory,
+                        # agent changes its direction
+                        if velocity_to_avoid_norm >= norm_own_initial_velocity:
+
+                            if (cosbeta >= -cosalpha and costheta >= -cosalpha):
+                                new_velocity += norm_own_initial_velocity * new_direction_rotated
+                                velocity_changed = True
+                    
+                            else: # If both agents can't intersect
+                                new_velocity += np.array([0.,0.], dtype='float64')
+
+                        else:  # If infected velocity < agent, don't worry
                             new_velocity += np.array([0.,0.], dtype='float64')
 
-                    else:  # If infected velocity < agent, don't worry
+                    if (0. < cosalpha <= 1.):
+                        # Looking foward: Avoid everyone
+                        new_velocity += norm_own_initial_velocity * new_direction_rotated
+                        velocity_changed = True
+                
+                # If avoidable agent is at rest and in forwards,
+                # avoid it changing the direction towards -relative_position_vector
+                # with a random deviation 
+                else: 
+                    if (0. < cosalpha < 1.):
+                        new_velocity += - np.array([(relative_position_vector[0]*np.cos(random_rotation_angle) - relative_position_vector[1]*np.sin(random_rotation_angle))
+                                                ,(relative_position_vector[0]*np.sin(random_rotation_angle) + relative_position_vector[1]*np.cos(random_rotation_angle))])*norm_own_initial_velocity/relative_position_vector_norm 
+                        velocity_changed = True 
+                    else:
                         new_velocity += np.array([0.,0.], dtype='float64')
 
-                if (0. < cosalpha <= 1.):
-                    # Looking foward: Avoid everyone
-                    new_velocity += norm_own_initial_velocity * new_direction_rotated
-                    velocity_changed = True
-            
-            # If avoidable agent is at rest and in forwards,
-            # avoid it changing the direction towards -relative_position_vector
-            # with a random deviation 
-            else: 
-                if (0. < cosalpha < 1.):
-                    new_velocity += - np.array([(relative_position_vector[0]*np.cos(random_rotation_angle) - relative_position_vector[1]*np.sin(random_rotation_angle))
-                                            ,(relative_position_vector[0]*np.sin(random_rotation_angle) + relative_position_vector[1]*np.cos(random_rotation_angle))])*norm_own_initial_velocity/relative_position_vector_norm 
-                    velocity_changed = True 
-                else:
-                    new_velocity += np.array([0.,0.], dtype='float64')
+            # Disaggregate new_velocity
+            if not np.array_equal(new_velocity, np.array([0.,0.], dtype='float64')):
+                self.vx, self.vy = new_velocity
 
-        # Disaggregate new_velocity
-        if not np.array_equal(new_velocity, np.array([0.,0.], dtype='float64')):
-            self.vx, self.vy = new_velocity
+            elif np.array_equal(new_velocity, np.array([0.,0.], dtype='float64')) \
+                and velocity_changed:
+                self.vx, self.vy = new_velocity
 
-        elif np.array_equal(new_velocity, np.array([0.,0.], dtype='float64')) \
-            and velocity_changed:
-            self.vx, self.vy = new_velocity
-
-        else:
-            # Velocity doesn't change
-            pass
+            else:
+                # Velocity doesn't change
+                pass
 
 
     def move(
@@ -931,29 +935,29 @@ class Agent:
         ):
         """
         """
-        #=============================================
-        # Evolve position
-        self.x = self.x + self.vx * dt
-        self.y = self.y + self.vy * dt
-
-
-        if not self.alertness:
+        if not self.is_hospitalized:
             #=============================================
-            # Evolve velocity as a random walk
-            dvx = maximum_free_random_speed * np.random.random_sample() \
-                - maximum_free_random_speed/2
-            self.vx = self.vx + dvx
+            # Evolve position
+            self.x = self.x + self.vx * dt
+            self.y = self.y + self.vy * dt
 
-            dvy = maximum_free_random_speed * np.random.random_sample() \
-                - maximum_free_random_speed/2
-            self.vy = self.vy + dvy
+
+            if not self.alertness:
+                #=============================================
+                # Evolve velocity as a random walk
+                dvx = maximum_free_random_speed * np.random.random_sample() \
+                    - maximum_free_random_speed/2
+                self.vx = self.vx + dvx
+
+                dvy = maximum_free_random_speed * np.random.random_sample() \
+                    - maximum_free_random_speed/2
+                self.vy = self.vy + dvy
 
 
     def individual_quarantine_function(
         self,
         previous_diagnosis_state: bool
         ):
-        """
         """
         if previous_diagnosis_state and self.diagnosed:
             pass
@@ -966,6 +970,8 @@ class Agent:
         else:
             # not previous_diagnosis_state and not self.diagnosed
             pass
+        """
+        pass
 
 
     def hospitalization_function(
@@ -974,16 +980,18 @@ class Agent:
         ):
         """
         """
-        if previous_hospitalization_state and self.hospitalized:
+        if previous_hospitalization_state and self.is_hospitalized:
             pass
-        elif not previous_hospitalization_state and self.hospitalized:
-            self.vx = 0.
-            self.vy = 0.
+        elif not previous_hospitalization_state and self.is_hospitalized:
             self.x = 0.
             self.y = 0.
-        elif previous_hospitalization_state and not self.hospitalized:
+            self.vx = 0.
+            self.vy = 0.
+        elif previous_hospitalization_state and not self.is_hospitalized:
+            self.x = 0.
+            self.y = 0.
             # Define velocity between (-vmax , +vmax)
             self.vx, self.vy = 2. * self.__vmax * np.random.random_sample(dim) - self.__vmax
         else:
-            # not previous_hospitalization_state and not self.hospitalized
+            # not previous_hospitalization_state and not self.is_hospitalized
             pass

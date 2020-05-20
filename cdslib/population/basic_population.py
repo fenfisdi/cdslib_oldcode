@@ -12,10 +12,17 @@ from cdslib.agents.agent import determine_age_group
 # TODO
 # Improve diagnosis state?? (using networks)
 #
+# Revisar self.age
+# Revisar contacted_with
+# Improve diagnosis
+# Improve inmunization
+# change could_be_hospitalized to should_be_hospitalized
 # hospitalization, UCI
 # Quarentine
 # Parallelization
 #
+# Initial spatial distribution
+# Family groups and mobility profiles
 # Movility profiles? ... Clases of Agents
 # Virus halo ... Probability density
 # Add units
@@ -458,6 +465,7 @@ class BasicPopulation:
 
                 spatial_trees_and_agents_indices(
                     self.population,
+                    self.population_number,
                     disease_state,
                     spatial_trees_by_disease_state,
                     agents_indices_by_disease_state
@@ -475,6 +483,7 @@ class BasicPopulation:
                 [
                     (
                         self.population,
+                        self.population_number,
                         disease_state,
                         parallel_spatial_trees_by_disease_state,
                         parallel_agents_indices_by_disease_state
@@ -500,6 +509,7 @@ class BasicPopulation:
                 [
                     (
                         self.population,
+                        self.population_number,
                         disease_state,
                         parallel_spatial_trees_by_disease_state,
                         parallel_agents_indices_by_disease_state
@@ -597,6 +607,7 @@ def retrieve_agent_dict(
 
 def spatial_trees_and_agents_indices(
     population,
+    population_number: int,
     disease_state: str,
     spatial_trees_by_disease_state,
     agents_indices_by_disease_state
@@ -617,7 +628,10 @@ def spatial_trees_and_agents_indices(
         ])
 
     if len(points) is not 0:
-        spatial_trees_by_disease_state[disease_state] = spatial.KDTree(points)
+        one_percent_of_population = np.floor(population_number*0.01)
+        leafsize = one_percent_of_population if one_percent_of_population > 10 else 10
+
+        spatial_trees_by_disease_state[disease_state] = spatial.KDTree(points, leafsize=leafsize)
         agents_indices_by_disease_state[disease_state] = agents_indices
     else:
         spatial_trees_by_disease_state[disease_state] = None
