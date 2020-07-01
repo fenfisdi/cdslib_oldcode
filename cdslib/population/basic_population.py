@@ -931,7 +931,7 @@ class BasicPopulation:
                     self.groups_in_quarantine_by_time_restrictions_df.to_csv(
                         os.path.join(
                             population_df_path,
-                            'quarantine_by_time_restrictions_df' + '.csv'
+                            filename + '_quarantine_by_time_restrictions_df' + '.csv'
                             ),
                         index=False
                         )
@@ -947,7 +947,7 @@ class BasicPopulation:
                         self.groups_in_quarantine_by_hospitalization_restrictions_df.to_csv(
                             os.path.join(
                                 population_df_path,
-                                'quarantine_by_hospitalization' + '.csv'
+                                filename + '_quarantine_by_hospitalization' + '.csv'
                                 ),
                             index=False
                             )
@@ -959,7 +959,7 @@ class BasicPopulation:
                         self.groups_in_quarantine_by_UCIs_restrictions_df.to_csv(
                             os.path.join(
                                 population_df_path,
-                                'quarantine_by_UCIs' + '.csv'
+                                filename + '_quarantine_by_UCIs' + '.csv'
                                 ),
                             index=False
                             )
@@ -975,7 +975,7 @@ class BasicPopulation:
                         self.groups_in_quarantine_by_deaths_df.to_csv(
                             os.path.join(
                                 population_df_path,
-                                'quarantine_by_deaths' + '.csv'
+                                filename + '_quarantine_by_deaths' + '.csv'
                                 ),
                             index=False
                             )
@@ -987,7 +987,7 @@ class BasicPopulation:
                         self.groups_in_quarantine_by_diagnosed_people_df.to_csv(
                             os.path.join(
                                 population_df_path,
-                                'quarantine_by_diagnosed_people' + '.csv'
+                                filename + '_quarantine_by_diagnosed_people' + '.csv'
                                 ),
                             index=False
                             )
@@ -1014,7 +1014,13 @@ class BasicPopulation:
                 # Restrictions by time dataframe
                 if self.quarantine_restrictions_info[
                     'restrictions_by_time']['enabled']:
-                    self.groups_in_quarantine_by_time_restrictions_df.to_csv('quarantine_by_time_restrictions_df' + '.csv', index=False)
+                    self.groups_in_quarantine_by_time_restrictions_df.to_csv(
+                        os.path.join(
+                            population_df_path,
+                            filename + '_quarantine_by_time_restrictions_df' + '.csv'
+                            ),
+                        index=False
+                        )
 
                 # Restrictions by hospitals variables dataframe
                 if self.quarantine_restrictions_info[
@@ -1024,13 +1030,25 @@ class BasicPopulation:
                     if self.quarantine_restrictions_info[
                         'restictions_by_hospitals_variables'][
                         'conditions_for_quarantine']['hospitals_capacity']['enabled']:
-                        self.groups_in_quarantine_by_hospitalization_restrictions_df.to_csv('quarantine_by_hospitalization' + '.csv', index=False)
+                        self.groups_in_quarantine_by_hospitalization_restrictions_df.to_csv(
+                            os.path.join(
+                                population_df_path,
+                                filename + '_quarantine_by_hospitalization' + '.csv'
+                                ),
+                            index=False
+                            )
 
                     # Variable 2: UCIs capacity
                     if self.quarantine_restrictions_info[
                         'restictions_by_hospitals_variables'][
                         'conditions_for_quarantine']['UCIs_capacity']['enabled']:
-                        self.groups_in_quarantine_by_UCIs_restrictions_df.to_csv('quarantine_by_UCIs' + '.csv', index=False)
+                        self.groups_in_quarantine_by_UCIs_restrictions_df.to_csv(
+                            os.path.join(
+                                population_df_path,
+                                filename + '_quarantine_by_UCIs' + '.csv'
+                                ),
+                            index=False
+                            )
 
                 # Restrictions by population variables dataframe
                 if self.quarantine_restrictions_info[
@@ -1040,14 +1058,27 @@ class BasicPopulation:
                     if self.quarantine_restrictions_info[
                         'restictions_by_population_variables'][
                         'conditions_for_quarantine']['dead by disease']['enabled']:
-                        self.groups_in_quarantine_by_deaths_df.to_csv('quarantine_by_deaths' + '.csv', index=False)
+                        self.groups_in_quarantine_by_deaths_df.to_csv(
+                            os.path.join(
+                                population_df_path,
+                                filename + '_quarantine_by_deaths' + '.csv'
+                                ),
+                            index=False
+                            )
 
                     # Variable 2: 'diagnosed'
                     if self.quarantine_restrictions_info[
                         'restictions_by_population_variables'][
                         'conditions_for_quarantine']['diagnosed']['enabled']:
-                        self.groups_in_quarantine_by_diagnosed_people_df.to_csv('quarantine_by_diagnosed_people' + '.csv', index=False)
+                        self.groups_in_quarantine_by_diagnosed_people_df.to_csv(
+                            os.path.join(
+                                population_df_path,
+                                filename + '_quarantine_by_diagnosed_people' + '.csv'
+                                ),
+                            index=False
+                            )
 
+                #===============================================================
 
 
     def evolve_population_single_step(self):

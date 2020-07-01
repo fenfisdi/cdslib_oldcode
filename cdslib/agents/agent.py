@@ -1030,7 +1030,7 @@ class Agent:
 
                 elif disease_state == 'inmune':
                     self.inmune_neighbors = \
-                        agents_indices_by_disease_state['susceptible'][points_inside_radius]
+                        agents_indices_by_disease_state['inmune'][points_inside_radius]
 
                 elif self.__dynamics_of_disease_states_contagion[
                 disease_state]['is_infected']:
