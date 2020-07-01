@@ -511,94 +511,94 @@ if __name__ == "__main__":
         'hospitalization_of_disease_states_by_vulnerability_group': {
             'not-vulnerable': {
                 'susceptible': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'exposed': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'asymptomatic': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'mildly-ill': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'moderate-ill': {
-                    'can_be_hospitalized': True,
+                    'could_be_hospitalized': True,
                     'hospitalization_probability': 1.0,
                     'UCI_probability': 0.0
                     },
                 'seriously-ill': {
-                    'can_be_hospitalized': True,
+                    'could_be_hospitalized': True,
                     'hospitalization_probability': 0.0,
                     'UCI_probability': 1.0
                     },
                 'recovered': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'inmune': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'dead': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     }
                 },
             'vulnerable': {
                 'susceptible': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'exposed': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'asymptomatic': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'mildly-ill': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'moderate-ill': {
-                    'can_be_hospitalized': True,
+                    'could_be_hospitalized': True,
                     'hospitalization_probability': 1.0,
                     'UCI_probability': 0.0
                     },
                 'seriously-ill': {
-                    'can_be_hospitalized': True,
+                    'could_be_hospitalized': True,
                     'hospitalization_probability': 0.0,
                     'UCI_probability': 1.0
                     },
                 'recovered': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'inmune': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     },
                 'dead': {
-                    'can_be_hospitalized': False,
+                    'could_be_hospitalized': False,
                     'hospitalization_probability': None,
                     'UCI_probability': None
                     }

@@ -1,6 +1,7 @@
 # COVID-19_example/pruebas
 COVID-19_example/pruebas
 COVID-19_example/multiprocessing.ipynb
+COVID-19_example/graphication.ipynb
 
 # Results
 *.sh
@@ -8,6 +9,8 @@ COVID-19_example/multiprocessing.ipynb
 *.csv
 *.pdf
 *.wsl
+*.html
+*.txt
 
 
 # Notebook Checkpoints

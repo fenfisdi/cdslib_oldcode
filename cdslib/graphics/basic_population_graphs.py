@@ -1,7 +1,10 @@
+import os
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from cdslib.population import BasicPopulation
 from cdslib.agents import AgentsInfo
+# conda install -c plotly plotly-orca==1.2.1 psutil requests
 
 class BasicPopulationGraphs:
     def __init__(
@@ -20,6 +23,8 @@ class BasicPopulationGraphs:
         """
         """
         self.agents_info_df = basic_population.agents_info_df
+
+        self.initial_population_number = basic_population.initial_population_number
 
         self.disease_states = agents_info.disease_states
         self.dynamics_of_disease_states_contagion = \
@@ -59,6 +64,9 @@ class BasicPopulationGraphs:
             disease_states_line_colors
 
 
+    # TODO
+    # quarantine group
+    # quarantine state
     def go_agent_scatter(
         self,
         agent_dict: dict
@@ -75,39 +83,63 @@ class BasicPopulationGraphs:
         vulnerability_group = agent_dict['vulnerability_group']
         disease_state = agent_dict['disease_state']
         diagnosed = agent_dict['diagnosed']
-        contacted_with = agent_dict['contacted_with']
+        is_infected = agent_dict['is_infected']
+        susceptible_neighbors = agent_dict['susceptible_neighbors']
+        infected_neighbors = agent_dict['infected_neighbors']
+        avoidable_neighbors = agent_dict['avoidable_neighbors']
         alerted_by = agent_dict['alerted_by']
 
-        infected_info = agent_dict['infected_info']
-
-
         if live_state == 'alive':
-            if len(list(infected_info.keys())) != 0:
+
+            if is_infected:
 
                 infected_by = agent_dict['infected_by']
                 infected_in_step = agent_dict['infected_in_step']
 
-                template = (
-                    f'<b>Agent</b>: {agent_label}'
-                    '<br>'
-                    f'<b>Position</b>: ({x:.2f}, {y:.2f})'
-                    '<br>'
-                    f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
-                    '<br>'
-                    f'<b>Vulnerability group</b>: {vulnerability_group}'
-                    '<br>'
-                    f'<b>Disease state</b>: {disease_state}'
-                    '<br>'
-                    f'<b>Diagnosed</b>: {diagnosed}'
-                    '<br>'
-                    f'<b>Infected by</b>: {infected_by}'
-                    '<br>'
-                    f'<b>Infected in step</b>: {infected_in_step:.0f}'
-                    '<br>'
-                    f'<b>Contacted with</b>: {contacted_with}'
-                    '<br>'
-                    f'<b>Alerted by</b>: {alerted_by}'
-                    )
+                if infected_by:
+
+                    template = (
+                        f'<b>Agent</b>: {agent_label}'
+                        '<br>'
+                        f'<b>Position</b>: ({x:.2f}, {y:.2f})'
+                        '<br>'
+                        f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
+                        '<br>'
+                        f'<b>Vulnerability group</b>: {vulnerability_group}'
+                        '<br>'
+                        f'<b>Disease state</b>: {disease_state}'
+                        '<br>'
+                        f'<b>Diagnosed</b>: {diagnosed}'
+                        '<br>'
+                        f'<b>Infected by</b>: {infected_by}'
+                        '<br>'
+                        f'<b>Infected in step</b>: {infected_in_step:.0f}'
+                        '<br>'
+                        f'<b>Susceptible neighbors</b>: {susceptible_neighbors}'
+                        '<br>'
+                        f'<b>Alerted by</b>: {alerted_by}'
+                        )
+
+                else:
+
+                    template = (
+                        f'<b>Agent</b>: {agent_label}'
+                        '<br>'
+                        f'<b>Position</b>: ({x:.2f}, {y:.2f})'
+                        '<br>'
+                        f'<b>Velocity</b>: ({vx:.2f}, {vy:.2f})'
+                        '<br>'
+                        f'<b>Vulnerability group</b>: {vulnerability_group}'
+                        '<br>'
+                        f'<b>Disease state</b>: {disease_state}'
+                        '<br>'
+                        f'<b>Diagnosed</b>: {diagnosed}'
+                        '<br>'
+                        f'<b>Susceptible neighbors</b>: {susceptible_neighbors}'
+                        '<br>'
+                        f'<b>Alerted by</b>: {alerted_by}'
+                        )
+
 
             else:
                 template = (
@@ -123,7 +155,9 @@ class BasicPopulationGraphs:
                     '<br>'
                     f'<b>Diagnosed</b>: {diagnosed}'
                     '<br>'
-                    f'<b>Contacted with</b>: {contacted_with}'
+                    f'<b>Infected neighbors</b>: {infected_neighbors}'
+                    '<br>'
+                    f'<b>Avoidable neighbors</b>: {avoidable_neighbors}'
                     '<br>'
                     f'<b>Alerted by</b>: {alerted_by}'
                     )
@@ -191,13 +225,52 @@ class BasicPopulationGraphs:
                 hoverinfo='text'
                 )
 
-
+    # TODO
+    # Step or datetime info in title?
     def plot_locations(
         self,
-        step: int
+        step: int,
+        show_figure: bool=True,
+        fig_name: str='population_location',
+        fig_title: str='Population locations',
+        show_step_in_title: bool=True,
+        save_fig: bool=False,
+        fig_path: str='.',
+        fig_format='html' # str or list
         ):
         """
         """
+        if save_fig:
+            #=============================================
+            # Validate fig_format
+
+            valid_fig_format = \
+                {'html', 'png', 'jpeg', 'webp', 'svg', 'pdf', 'eps'}
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format not in valid_fig_format:
+                        ErrorString = (
+                            f'[ERROR] "fig_format" must be one of:'
+                            '\n'
+                            f'\t{valid_fig_format}'
+                            )
+                        raise ValueError(ErrorString)
+            else:
+                if fig_format not in valid_fig_format:
+                    ErrorString = (
+                        f'[ERROR] "fig_format" must be one of:'
+                        '\n'
+                        f'\t{valid_fig_format}'
+                        )
+                    raise ValueError(ErrorString)
+
+        #=============================================
+        # Plot
+
+        # Set up plot
         fig = go.Figure(
             layout=go.Layout(
                 width=self.width, 
@@ -212,29 +285,58 @@ class BasicPopulationGraphs:
                     autorange=False,
                     zeroline=False
                     ),
-                title_text='Current Population Locations',
+                title_text=f'{fig_title} at step: {step}' \
+                    if show_step_in_title else f'{fig_title}',
                 hovermode='closest'
                 )
             )
 
+        # Retrieve population data at specified step
         population_data = self.agents_info_df.loc[
             self.agents_info_df['step'] == step
             ].sort_values(by=['agent']).to_dict(orient='records')
 
+        # Add traces
         # Cycle runs along all agents in current population
         for agent_dict in population_data:
-            # Add traces
             fig.add_trace(
                 self.go_agent_scatter(agent_dict)
                 )
 
+        # Disable legend
         fig.update_layout(showlegend=False)
 
-        fig.show()
+        # Save figure
+        if save_fig:
+            fig_filename = os.path.join(fig_path, fig_name)
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format == 'html':
+                        fig.write_html(fig_filename + '.html')
+                    else:
+                        fig.write_image(fig_filename + f'.{single_fig_format}')
+            else:
+                if fig_format == 'html':
+                    fig.write_html(fig_filename + '.html')
+                else:
+                    fig.write_image(fig_filename + f'.{fig_format}')
+
+        if show_figure:
+            fig.show()
+
 
     # TODO
+    # Save in other video formats
+    # Step or datetime info in title?
     # Change velocity, frames, menu, axis labels
-    def animate_population(self):
+    def animate_population(
+        self,
+        filename: str=None,
+        show_figure: bool=True
+        ):
         """
         """
         t_list = list(set(self.agents_info_df['step'].to_list()))
@@ -313,14 +415,19 @@ class BasicPopulationGraphs:
         
         fig.update_layout(showlegend=False)
 
-        fig.show()
+        if filename:
+            fig.write_html(filename + '.html')
+
+        if show_figure:
+            fig.show()
 
 
     def go_line(
         self,
         x: list,
-        y: list, 
-        name: str
+        y: list,
+        name: str,
+        mode: str='lines'
         ):
         """
         """
@@ -330,7 +437,7 @@ class BasicPopulationGraphs:
             return go.Scatter(
                 x=x,
                 y=y,
-                mode='lines',
+                mode=mode,
                 connectgaps=False,
                 line=self.disease_states_line_colors[name],
                 name=name
@@ -339,105 +446,414 @@ class BasicPopulationGraphs:
             return go.Scatter(
                 x=x,
                 y=y,
-                mode='lines',
+                mode=mode,
                 connectgaps=False,
                 name=name
                 )
 
 
-    def agents_times_series_plot(
+    def disease_states_times_series_plot(
         self,
-        mode: str='states',
-        column: str=None,
-        inspection_values: list=None
+        y_format: str='percentage',
+        time_format: str='datetime',
+        show_figure: bool=True,
+        fig_name: str='disease_states_times_series',
+        fig_title: str='Disease states time series',
+        save_fig: bool=False,
+        fig_path: str='.',
+        fig_format='html', # str or list 
+        save_csv: bool=False,
+        csv_path: str='.',
+        dataframe_format: str='long'
         ):
         """
-            mode: str
         """
+        #=============================================
+        # Validate y_format
 
-        if mode == 'states':
+        valid_y_format = {'percentage', 'number'}
 
-            df = self.agents_info_df[['step', 'agent', 'disease_state']].groupby(
-                    ['step', 'disease_state'],
-                    as_index=False
-                    ).count().copy()
+        if y_format not in valid_y_format:
+            ErrorString = (
+                f'[ERROR] "y_format" must be one of:'
+                '\n'
+                f'\t{valid_y_format}'
+                )
+            raise ValueError(ErrorString)
 
+        #=============================================
+        # Validate time_format
+
+        valid_time_format = {'step', 'datetime'}
+
+        if time_format not in valid_time_format:
+            ErrorString = (
+                f'[ERROR] "time_format" must be one of:'
+                '\n'
+                f'\t{valid_time_format}'
+                )
+            raise ValueError(ErrorString)
+
+
+        if save_fig:
+            #=============================================
+            # Validate fig_format
+
+            valid_fig_format = \
+                {'html', 'png', 'jpeg', 'webp', 'svg', 'pdf', 'eps'}
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format not in valid_fig_format:
+                        ErrorString = (
+                            f'[ERROR] "fig_format" must be one of:'
+                            '\n'
+                            f'\t{valid_fig_format}'
+                            )
+                        raise ValueError(ErrorString)
+            else:
+                if fig_format not in valid_fig_format:
+                    ErrorString = (
+                        f'[ERROR] "fig_format" must be one of:'
+                        '\n'
+                        f'\t{valid_fig_format}'
+                        )
+                    raise ValueError(ErrorString)
+
+        if save_csv:
+            #=============================================
+            # Validate dataframe_format
+
+            valid_dataframe_format = {'long', 'wide'}
+
+            if dataframe_format not in valid_dataframe_format:
+                ErrorString = (
+                    f'[ERROR] "dataframe_format" must be one of:'
+                    '\n'
+                    f'\t{valid_dataframe_format}'
+                    )
+                raise ValueError(ErrorString)
+
+        #=============================================
+        # Prepare dataframe
+
+        disease_states_df = self.agents_info_df.copy()
+
+        df = disease_states_df[[time_format, 'agent', 'disease_state']].groupby(
+                [time_format, 'disease_state'],
+                as_index=False
+                ).count()
+
+        if y_format == 'percentage':
             df.rename(
-                columns={'agent':'agents'},
+                columns={'agent': 'agents_pct'},
                 inplace=True
                 )
-            
-            states = self.agents_info_df['disease_state'].unique()
-            
-            fig = go.Figure()
-            
-            for state in states:
-                subdf = df.loc[
-                    df['disease_state'] == state
-                ][['step', 'agents']].copy()
 
-                # Add traces
-                fig.add_trace(
-                    self.go_line(
-                        x=subdf['step'].to_list(),
-                        y=subdf['agents'].to_list(),
-                        name=state
-                    )
+            df['agents_pct'] = df['agents_pct']/self.initial_population_number 
+        else:
+            # y_format == 'number'
+            df.rename(
+                columns={'agent': 'agents'},
+                inplace=True
                 )
 
-            fig.update_xaxes(rangeslider_visible=True)
-            fig.update_yaxes(autorange=True, fixedrange=False)
+        # Retrieve states
+        states = self.agents_info_df['disease_state'].unique()
 
-            fig.update_layout(hovermode='x unified')
+        # dataframe in long format
+        long_format_df = df
 
+        # Reshape df to wide format
+        wide_format_df = pd.pivot_table(
+            data=df,
+            index=time_format,
+            columns='disease_state',
+            values='agents_pct' if y_format == 'percentage' else 'agents'
+            )
+
+        wide_format_df.columns.name = None
+        wide_format_df.reset_index(inplace=True)
+
+        # Save csv
+        if save_csv:
+            csv_filename = os.path.join(csv_path, fig_name)
+
+            if dataframe_format == 'long':
+                long_format_df.to_csv(csv_filename + '.csv', index=False)
+            
+            if dataframe_format == 'wide':
+                wide_format_df.to_csv(csv_filename + '.csv', index=False)
+
+        #=============================================
+        # Plot
+
+        # Set up plot
+        fig = go.Figure(
+            layout=go.Layout(
+                title=fig_title,
+                xaxis_title=time_format,
+                yaxis_title='Percentage of agents' if y_format == 'percentage' else 'Number of agents'
+                )
+            )
+
+        # Add traces
+        for state in states:
+            fig.add_trace(
+                self.go_line(
+                    x=wide_format_df[time_format].to_list(),
+                    y=wide_format_df[state].to_list(),
+                    name=state,
+                    mode='lines' if state is not 'dead' else 'markers'
+                )
+            )
+
+        # Add slider
+        fig.update_xaxes(rangeslider_visible=True)
+        fig.update_yaxes(autorange=True, fixedrange=False)
+
+        # Set up hover
+        fig.update_layout(hovermode='x unified')
+
+        # Save figure
+        if save_fig:
+            fig_filename = os.path.join(fig_path, fig_name)
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format == 'html':
+                        fig.write_html(fig_filename + '.html')
+                    else:
+                        fig.write_image(fig_filename + f'.{single_fig_format}')
+            else:
+                if fig_format == 'html':
+                    fig.write_html(fig_filename + '.html')
+                else:
+                    fig.write_image(fig_filename + f'.{fig_format}')
+
+        # Show figure
+        if show_figure:
             fig.show()
 
-        if mode == 'infection':
-            infected_states_map = {
-                state: (state \
-                if not self.dynamics_of_disease_states_contagion[state]['is_infected'] \
-                else 'infected')
-                for state in self.disease_states
-            }
 
-            infection_df = self.agents_info_df.copy()
+    def infection_times_series_plot(
+        self,
+        y_format: str='percentage',
+        show_those_infected_diagnosed: bool=True,
+        time_format: str='datetime',
+        show_figure: bool=True,
+        fig_name: str='infection_times_series',
+        fig_title: str='Infection time series',
+        save_fig: bool=False,
+        fig_path: str='.',
+        fig_format='html', # str or list
+        save_csv: bool=False,
+        csv_path: str='.',
+        dataframe_format: str='long'
+        ):
+        """
+        """
+        #=============================================
+        # Validate y_format
 
-            infection_df['infection_state'] = [
-                infected_states_map[state]
-                for state in infection_df['disease_state'].to_list()
-                ]
+        valid_y_format = {'percentage', 'number'}
 
-            df = infection_df[['step', 'agent', 'infection_state']].groupby(
-                    ['step', 'infection_state'],
+        if y_format not in valid_y_format:
+            ErrorString = (
+                f'[ERROR] "y_format" must be one of:'
+                '\n'
+                f'\t{valid_y_format}'
+                )
+            raise ValueError(ErrorString)
+
+        #=============================================
+        # Validate time_format
+
+        valid_time_format = {'step', 'datetime'}
+
+        if time_format not in valid_time_format:
+            ErrorString = (
+                f'[ERROR] "time_format" must be one of:'
+                '\n'
+                f'\t{valid_time_format}'
+                )
+            raise ValueError(ErrorString)
+
+        if save_fig:
+            #=============================================
+            # Validate fig_format
+
+            valid_fig_format = \
+                {'html', 'png', 'jpeg', 'webp', 'svg', 'pdf', 'eps'}
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format not in valid_fig_format:
+                        ErrorString = (
+                            f'[ERROR] "fig_format" must be one of:'
+                            '\n'
+                            f'\t{valid_fig_format}'
+                            )
+                        raise ValueError(ErrorString)
+            else:
+                if fig_format not in valid_fig_format:
+                    ErrorString = (
+                        f'[ERROR] "fig_format" must be one of:'
+                        '\n'
+                        f'\t{valid_fig_format}'
+                        )
+                    raise ValueError(ErrorString)
+
+        if save_csv:
+            #=============================================
+            # Validate dataframe_format
+
+            valid_dataframe_format = {'long', 'wide'}
+
+            if dataframe_format not in valid_dataframe_format:
+                ErrorString = (
+                    f'[ERROR] "dataframe_format" must be one of:'
+                    '\n'
+                    f'\t{valid_dataframe_format}'
+                    )
+                raise ValueError(ErrorString)
+
+        #=============================================
+        # Prepare dataframe
+
+        infection_df = self.agents_info_df.copy()
+
+        infection_df['infection_state'] = infection_df.apply(
+            lambda row: row['disease_state'] \
+                if not row['is_infected'] else 'infected',
+            axis=1
+            )
+
+        if not show_those_infected_diagnosed:
+
+            df = infection_df[[time_format, 'agent', 'infection_state']].groupby(
+                    [time_format, 'infection_state'],
                     as_index=False
-                    ).count().copy()
+                    ).count()
 
-            df.rename(
-                columns={'agent':'agents'},
+        else:
+            # Show those infected diagnosed
+            prev_df_1 = infection_df.loc[
+                (infection_df['diagnosed'] == True)
+                &
+                (infection_df['infection_state'] == 'infected')
+            ][[time_format, 'infection_state', 'agent']]
+
+            prev_df_1.replace(
+                to_replace='infected',
+                value='diagnosed',
                 inplace=True
                 )
-            
-            states = infection_df['infection_state'].unique()
-            
-            fig = go.Figure()
-            
-            for state in states:
-                subdf = df.loc[
-                    df['infection_state'] == state
-                ][['step', 'agents']].copy()
 
-                # Add traces
-                fig.add_trace(
-                    self.go_line(
-                        x=subdf['step'].to_list(),
-                        y=subdf['agents'].to_list(),
-                        name=state
-                    )
+            prev_df_2 = infection_df[[time_format, 'infection_state', 'agent']]
+
+            prev_df = pd.concat([prev_df_1, prev_df_2], ignore_index=True)
+
+            df = prev_df.groupby(
+                    [time_format, 'infection_state'],
+                    as_index=False
+                    ).count()
+
+        if y_format == 'percentage':
+            df.rename(
+                columns={'agent': 'agents_pct'},
+                inplace=True
                 )
 
-            fig.update_xaxes(rangeslider_visible=True)
-            fig.update_yaxes(autorange=True, fixedrange=False)
-            
-            fig.update_layout(hovermode='x unified')
+            df['agents_pct'] = df['agents_pct']/self.initial_population_number 
+        else:
+            # y_format == 'number'
+            df.rename(
+                columns={'agent': 'agents'},
+                inplace=True
+                )
 
+        # Retrieve states
+        states = df['infection_state'].unique()
+
+        # dataframe in long format
+        long_format_df = df
+
+        # Reshape df to wide format
+        wide_format_df = pd.pivot_table(
+            data=df,
+            index=time_format,
+            columns='infection_state',
+            values='agents_pct' if y_format == 'percentage' else 'agents'
+            )
+
+        wide_format_df.columns.name = None
+        wide_format_df.reset_index(inplace=True)
+
+        # Save csv
+        if save_csv:
+            csv_filename = os.path.join(csv_path, fig_name)
+
+            if dataframe_format == 'long':
+                long_format_df.to_csv(csv_filename + '.csv', index=False)
+            
+            if dataframe_format == 'wide':
+                wide_format_df.to_csv(csv_filename + '.csv', index=False)
+
+        #=============================================
+        # Plot
+
+        # Set up plot
+        fig = go.Figure(
+            layout=go.Layout(
+                title=fig_title,
+                xaxis_title=time_format,
+                yaxis_title='Percentage of agents' if y_format == 'percentage' else 'Number of agents'
+                )
+            )
+
+        # Add traces
+        for state in states:
+            fig.add_trace(
+                self.go_line(
+                    x=wide_format_df[time_format].to_list(),
+                    y=wide_format_df[state].to_list(),
+                    name=state,
+                    mode='lines' if state is not 'dead' else 'markers'
+                )
+            )
+
+        # Add slider
+        fig.update_xaxes(rangeslider_visible=True)
+        fig.update_yaxes(autorange=True, fixedrange=False)
+
+        # Set up hover
+        fig.update_layout(hovermode='x unified')
+
+        # Save figure
+        if save_fig:
+            fig_filename = os.path.join(fig_path, fig_name)
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format == 'html':
+                        fig.write_html(fig_filename + '.html')
+                    else:
+                        fig.write_image(fig_filename + f'.{single_fig_format}')
+            else:
+                if fig_format == 'html':
+                    fig.write_html(fig_filename + '.html')
+                else:
+                    fig.write_image(fig_filename + f'.{fig_format}')
+
+        # Show figure
+        if show_figure:
             fig.show()

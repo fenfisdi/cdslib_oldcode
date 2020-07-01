@@ -1,6 +1,8 @@
 import copy
 import numpy as np
 
+from cdslib.hospitals import Hospital
+
 dim = 2
 
 def determine_age_group(
@@ -39,7 +41,7 @@ class AgentsInfo:
         contagion_dynamics_info: dict,
         population_age_groups_info: dict,
         diagnosis_of_disease_states_by_vulnerability_group: dict,
-        hospitalization_info: dict,
+        hospitalization_of_disease_states_by_vulnerability_group: dict,
         social_distancing_info: dict
         ):
         """
@@ -64,6 +66,16 @@ class AgentsInfo:
                 'disease_states_transitions_by_vulnerability_group'
                 ]
 
+        self.disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group = \
+            dynamics_of_the_disease_states_transitions_info[
+                'disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group'
+                ]
+
+        self.disease_states_transitions_by_UCI_unavailability_by_vulnerability_group = \
+            dynamics_of_the_disease_states_transitions_info[
+                'disease_states_transitions_by_UCI_unavailability_by_vulnerability_group'
+                ]
+
         # contagion_dynamics_info
         self.disease_states_transitions_by_contagion = \
             contagion_dynamics_info[
@@ -85,9 +97,9 @@ class AgentsInfo:
                 'dynamics_of_disease_states_contagion'
                 ]
 
-        self.inmunization_level_by_vulnerability_group = \
+        self.inmunization_level_gained_by_disease_by_vulnerability_group = \
             contagion_dynamics_info[
-                'inmunization_level_by_vulnerability_group'
+                'inmunization_level_gained_by_disease_by_vulnerability_group'
                 ]
 
         # population_age_groups_info
@@ -96,16 +108,9 @@ class AgentsInfo:
         self.diagnosis_of_disease_states_by_vulnerability_group = \
             diagnosis_of_disease_states_by_vulnerability_group
 
-        # hospitalization_info
-        self.hospital_information = \
-            hospitalization_info[
-                    'hospital_information'
-                ]
-
+        # hospitalization_of_disease_states_by_vulnerability_group
         self.hospitalization_of_disease_states_by_vulnerability_group = \
-            hospitalization_info[
-                    'hospitalization_of_disease_states_by_vulnerability_group'
-                ]
+            hospitalization_of_disease_states_by_vulnerability_group
 
         # social_distancing_info
         self.dynamics_of_alertness_of_disease_states_by_vulnerability_group = \
@@ -133,8 +138,10 @@ class Agent:
         vulnerability_group: str,
         age: float,
         age_group: str,
-        diagnosed: bool=False,
-        inmunization_level: float=0.0
+        inmunization_level: float,
+        quarantine_group: str,
+        obedience_to_quarantine: float,
+        diagnosed: bool=False
         ):
         """
         """
@@ -145,7 +152,26 @@ class Agent:
             ):
             setattr(self, '_Agent__' + key, value)
 
-        self.__vmax = vmax
+
+        # Create a dictionary of radius for trace neighbors function
+        radius_list = []
+        for dis_state in self.__disease_states:
+            radius_list.append(
+                self.__dynamics_of_disease_states_contagion[
+                dis_state]['spread_radius']
+                )
+        radius_arr = np.array(radius_list, dtype=np.float)
+        radius_arr = np.nan_to_num(radius_arr, nan=-np.inf)
+        max_radius = radius_arr.max()
+        radius_arr = np.nan_to_num(radius_arr, neginf=max_radius)
+
+        self.__trace_radius = {
+            dis_state: radius_arr[i]
+            for i, dis_state in enumerate(self.__disease_states)
+            }
+
+        # Define vmax
+        self.vmax = vmax
 
         # Define agent label
         self.agent: int = agent
@@ -158,8 +184,8 @@ class Agent:
         self.x: float = x
         self.y: float = y
 
-        # Define initial velocity between (-vmax , +vmax)
-        self.vx, self.vy = 2. * vmax * np.random.random_sample(dim) - vmax
+        # Define initial velocity
+        self.initialize_velocity()
 
         # Initialize disease_state, susceptibility_group,
         # vulnerability_group and diagnosis state 
@@ -169,15 +195,27 @@ class Agent:
 
         self.vulnerability_group: str = vulnerability_group
 
-        self.diagnosed: bool = diagnosed
-
-        self.is_hospitalized: bool = False
-
-        self.is_in_UCI: bool = False
-
         self.waiting_diagnosis: bool = False
 
         self.time_waiting_diagnosis: int = None
+
+        self.diagnosed: bool = diagnosed
+
+        self.time_after_being_diagnosed: int = None
+
+        self.needs_hospitalization: bool = False
+
+        self.is_hospitalized: bool = False
+
+        self.hospital_label: str = None
+
+        self.time_waiting_hospitalization: int = None
+
+        self.needs_UCI: bool = False
+
+        self.is_in_UCI: bool = False
+
+        self.time_waiting_UCI: int = None
 
         self.infected_by: list = []
         self.infected_in_step: int = None
@@ -185,7 +223,19 @@ class Agent:
 
         self.inmunization_level: float = inmunization_level
 
-        self.contacted_with: list = []
+        self.quarantine_group: str = quarantine_group
+        self.obedience_to_quarantine: float = obedience_to_quarantine
+        self.quarantine_state: str = 'Not in quarantine'
+
+        self.susceptible_neighbors: list = []
+
+        self.infected_neighbors: list = []
+
+        self.inmune_neighbors: list = []
+
+        self.total_neighbors: list = []
+
+        self.avoidable_neighbors: list = []
 
         self.alertness: bool = False
 
@@ -232,6 +282,18 @@ class Agent:
         return agent_dict.keys()
 
 
+    def initialize_velocity(
+        self
+        ):
+        """
+        """
+        # Define velocity between (0 , vmax)
+        v = self.vmax * np.random.random_sample()
+        theta = 2. * np.pi * np.random.random_sample()
+
+        self.vx, self.vy = [v * np.cos(theta), v * np.sin(theta)]
+
+
     def determine_disease_state_time(self):
         """
         """
@@ -248,11 +310,15 @@ class Agent:
 
     def disease_state_transition(
         self,
-        dt: float
+        dt: int,
+        hospitals: dict,
+        hospitals_spatial_tree,
+        hospitals_labels
         ):
         """
         """
         self.disease_state_time += dt
+        previous_disease_state = self.disease_state
 
         if (self.disease_state_max_time
         and self.disease_state_time >= self.disease_state_max_time):
@@ -283,16 +349,17 @@ class Agent:
                     self.disease_state = becomes_into_disease_state
 
                     if becomes_into_disease_state == 'dead':
-                        # Agent die by disease
+                        # Agent died by disease
                         self.live_state = 'dead by disease'
-                    else:
-                        previous_diagnosis_state = self.diagnosed
-                        self.update_diagnosis_state(dt, the_state_changed=True)
-                        self.individual_quarantine_function(previous_diagnosis_state)
 
-                        previous_hospitalization_state = self.is_hospitalized
-                        self.update_hospitalization_state()
-                        self.hospitalization_function(previous_hospitalization_state)
+                    self.update_diagnosis_state(dt, previous_disease_state)
+
+                    hospitals = self.update_hospitalization_state(
+                        dt,
+                        hospitals,
+                        hospitals_spatial_tree,
+                        hospitals_labels
+                        )
 
                     self.disease_state_time = 0
 
@@ -301,18 +368,22 @@ class Agent:
                     break
 
         else:
-            previous_diagnosis_state = self.diagnosed
-            self.update_diagnosis_state(dt, the_state_changed=False)
-            self.individual_quarantine_function(previous_diagnosis_state)
+            self.update_diagnosis_state(dt, previous_disease_state)
 
-            previous_hospitalization_state = self.is_hospitalized
-            self.update_hospitalization_state()
-            self.hospitalization_function(previous_hospitalization_state)
+            hospitals = self.update_hospitalization_state(
+                dt,
+                hospitals,
+                hospitals_spatial_tree,
+                hospitals_labels
+                )
+
+        return hospitals
 
 
     def disease_state_transition_by_contagion(
         self,
         step: int,
+        dt: int,
         spatial_trees_by_disease_state: dict,
         agents_indices_by_disease_state: dict
         ):
@@ -405,11 +476,11 @@ class Agent:
 
                         self.update_infection_status(becomes_into_disease_state)
 
+                        previous_disease_state = self.disease_state
+
                         self.disease_state = becomes_into_disease_state
 
-                        previous_diagnosis_state = self.diagnosed
-                        self.update_diagnosis_state(step, the_state_changed=True)
-                        self.individual_quarantine_function(previous_diagnosis_state)
+                        self.update_diagnosis_state(dt, previous_disease_state)
 
                         self.disease_state_time = 0
 
@@ -419,6 +490,98 @@ class Agent:
         else:
             # Agent cannot get infected
             pass
+
+
+    def disease_states_transitions_by_hospitalization_unavailability(self):
+        """
+        """
+
+        if self.__disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group[
+        self.vulnerability_group][self.disease_state]['max_time_waiting_hospitalization']:
+
+            if self.time_waiting_hospitalization >= self.__disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group[
+            self.vulnerability_group][self.disease_state]['max_time_waiting_hospitalization']:
+
+                # Verify: becomes into ? ... Throw the dice
+                dice = np.random.random_sample()
+
+                cummulative_probability = 0. + self.inmunization_level
+
+                for (probability, becomes_into_disease_state) in sorted(
+                    zip(
+                        self.__disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group[
+                        self.vulnerability_group][self.disease_state]['transition_probability'],
+                        self.__disease_states_transitions_by_hospitalization_unavailability_by_vulnerability_group[
+                        self.vulnerability_group][self.disease_state]['becomes_into']
+                        ),
+                    # In order to use criticality_level
+                    # pair = (probability, becomes_into_disease_state)
+                    key=lambda pair: self.__criticality_level_of_evolution_of_disease_states[pair[1]]
+                    ):
+
+                    cummulative_probability += probability
+
+                    if dice <= cummulative_probability:
+
+                        self.update_infection_status(becomes_into_disease_state)
+
+                        self.disease_state = becomes_into_disease_state
+
+                        if becomes_into_disease_state == 'dead':
+                            # Agent died by disease
+                            self.live_state = 'dead by disease'
+
+                        self.disease_state_time = 0
+
+                        self.determine_disease_state_time()
+
+                        break
+
+
+    def disease_states_transitions_by_UCI_unavailability(self):
+        """
+        """
+
+        if self.__disease_states_transitions_by_UCI_unavailability_by_vulnerability_group[
+        self.vulnerability_group][self.disease_state]['max_time_waiting_UCI']:
+
+            if self.time_waiting_UCI >= self.__disease_states_transitions_by_UCI_unavailability_by_vulnerability_group[
+            self.vulnerability_group][self.disease_state]['max_time_waiting_UCI']:
+
+                # Verify: becomes into ? ... Throw the dice
+                dice = np.random.random_sample()
+
+                cummulative_probability = 0. + self.inmunization_level
+
+                for (probability, becomes_into_disease_state) in sorted(
+                    zip(
+                        self.__disease_states_transitions_by_UCI_unavailability_by_vulnerability_group[
+                        self.vulnerability_group][self.disease_state]['transition_probability'],
+                        self.__disease_states_transitions_by_UCI_unavailability_by_vulnerability_group[
+                        self.vulnerability_group][self.disease_state]['becomes_into']
+                        ),
+                    # In order to use criticality_level
+                    # pair = (probability, becomes_into_disease_state)
+                    key=lambda pair: self.__criticality_level_of_evolution_of_disease_states[pair[1]]
+                    ):
+
+                    cummulative_probability += probability
+
+                    if dice <= cummulative_probability:
+
+                        self.update_infection_status(becomes_into_disease_state)
+
+                        self.disease_state = becomes_into_disease_state
+
+                        if becomes_into_disease_state == 'dead':
+                            # Agent died by disease
+                            self.live_state = 'dead by disease'
+
+                        self.disease_state_time = 0
+
+                        self.determine_disease_state_time()
+
+                        break
 
 
     def determine_age_group(self):
@@ -474,54 +637,70 @@ class Agent:
         and self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']):
             self.is_infected = True
             self.times_infected += 1
-        elif not self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']:
+        elif (self.__dynamics_of_disease_states_contagion[self.disease_state]['is_infected']
+        and not self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']):
             self.is_infected = False
 
             # Inmunization level
-            self.update_inmunization_level()
+            self.update_inmunization_level(becomes_into_disease_state)
 
 
-    def update_inmunization_level(self):
+    def update_inmunization_level(
+        self,
+        becomes_into_disease_state: str
+        ):
         """
         """
-        self.inmunization_level += \
-            self.__inmunization_level_by_vulnerability_group[self.vulnerability_group]
+        if self.__inmunization_level_gained_by_disease_by_vulnerability_group[
+        self.vulnerability_group][becomes_into_disease_state]:
+            self.inmunization_level += \
+                self.__inmunization_level_gained_by_disease_by_vulnerability_group[
+                    self.vulnerability_group][becomes_into_disease_state]
 
 
     def update_diagnosis_state(
         self,
         dt: float,
-        the_state_changed: bool=False
+        previous_disease_state: str
         ):
         """
         """
-        if not the_state_changed:
-            # Here we are trying to model the probability that any agent is
-            # taken into account for diagnosis
-            # according to its state and vulnerability group
+        previous_diagnosis_state = self.diagnosed
 
-            #=============================================
-            # Not diagnosed and not waiting diagnosis ?
-            # Then verify if is going to be diagnosed
+        # Here we are trying to model the probability that any agent is
+        # taken into account for diagnosis
+        # according to its state and vulnerability group
+
+        #=============================================
+        # Not diagnosed and not waiting diagnosis ?
+        # Then verify if is going to be diagnosed
+
+        if self.__diagnosis_of_disease_states_by_vulnerability_group[
+        self.vulnerability_group][self.disease_state]['can_be_diagnosed']:
 
             if not self.diagnosed:
 
                 if not self.waiting_diagnosis:
 
-                    if self.__diagnosis_of_disease_states_by_vulnerability_group[
-                    self.vulnerability_group][self.disease_state]['can_be_diagnosed']:
+                    # Verify: is going to be diagnosed ? ... Throw the dice
+                    dice = np.random.random_sample()
 
-                        # Verify: is going to be diagnosed ? ... Throw the dice
-                        dice = np.random.random_sample()
+                    if dice <= \
+                    self.__diagnosis_of_disease_states_by_vulnerability_group[
+                    self.vulnerability_group][self.disease_state]['diagnosis_probability']:
 
-                        if dice <= \
-                        self.__diagnosis_of_disease_states_by_vulnerability_group[
-                        self.vulnerability_group][self.disease_state]['diagnosis_probability']:
+                        # Agent is going to be diagnosed !!!
+                        self.waiting_diagnosis = True
 
-                            # Agent is going to be diagnosed !!!
-                            self.waiting_diagnosis = True
+                        self.time_waiting_diagnosis = 0
 
-                            self.time_waiting_diagnosis = 0
+                        self.__max_time_waiting_diagnosis = \
+                            self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                self.vulnerability_group][self.disease_state]['diagnosis_time']
+
+                        self.__quarantine_time_after_being_diagnosed = \
+                            self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                self.vulnerability_group][self.disease_state]['diagnosis_time']
 
                 else:
                     # Agent is waiting diagnosis
@@ -531,8 +710,7 @@ class Agent:
                     self.time_waiting_diagnosis += dt
 
                     if self.time_waiting_diagnosis >= \
-                    self.__diagnosis_of_disease_states_by_vulnerability_group[
-                    self.vulnerability_group][self.disease_state]['diagnosis_time']:
+                    self.__max_time_waiting_diagnosis:
 
                         self.diagnosed = True
 
@@ -540,44 +718,207 @@ class Agent:
 
                         self.time_waiting_diagnosis = None
 
+                        delattr(self, '_Agent__max_time_waiting_diagnosis')
+
+                        self.time_after_being_diagnosed = 0
+
+                        self.quarantine_by_diagnosis(previous_diagnosis_state)
+
             else:
                 # Agent is diagnosed
-                pass
+
+                self.time_after_being_diagnosed += dt
+
+                if self.__quarantine_time_after_being_diagnosed:
+
+                    if self.time_after_being_diagnosed >= \
+                    self.__quarantine_time_after_being_diagnosed:
+
+                        if not self.waiting_diagnosis:
+
+                            # Verify: is going to be diagnosed again? ... Throw the dice
+                            dice = np.random.random_sample()
+
+                            if dice <= \
+                            self.__diagnosis_of_disease_states_by_vulnerability_group[
+                            self.vulnerability_group][self.disease_state]['diagnosis_probability']:
+
+                                # Agent is going to be diagnosed !!!
+                                self.waiting_diagnosis = True
+
+                                self.time_waiting_diagnosis = 0
+
+                                self.__max_time_waiting_diagnosis = \
+                                    self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                        self.vulnerability_group][self.disease_state]['diagnosis_time']
+
+                                self.__quarantine_time_after_being_diagnosed = \
+                                    self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                        self.vulnerability_group][self.disease_state]['diagnosis_time']
+
+                            else:
+                                # Agent was not diagnosed again !!!
+                                # Agent is a false negative !!!
+                                self.diagnosed = False
+
+                                self.waiting_diagnosis = False
+
+                                self.time_waiting_diagnosis = None
+
+                                delattr(self, '_Agent__quarantine_time_after_being_diagnosed')
+
+                                self.quarantine_by_diagnosis(previous_diagnosis_state)
+
+                        else:
+                            # Agent is waiting diagnosis
+
+                            #=============================================
+                            # Increment time waiting diagnosis
+                            self.time_waiting_diagnosis += dt
+
+                            if self.time_waiting_diagnosis >= \
+                            self.__max_time_waiting_diagnosis:
+
+                                self.diagnosed = True
+
+                                self.waiting_diagnosis = False
+
+                                self.time_waiting_diagnosis = None
+
+                                delattr(self, '_Agent__max_time_waiting_diagnosis')
+
+                                self.time_after_being_diagnosed = 0
+
+                                self.quarantine_by_diagnosis(previous_diagnosis_state)
+
         else:
-            # Agent changed state
+            # Agent current disease state cannot be diagnosed
 
-            # If agent cannot be diagnosed
-            if not self.__diagnosis_of_disease_states_by_vulnerability_group[
-            self.vulnerability_group][self.disease_state]['can_be_diagnosed']:
+            if self.waiting_diagnosis:
+                # Agent previous disease state was going to be diagnosed
 
+                #=============================================
+                # Increment time waiting diagnosis
+                self.time_waiting_diagnosis += dt
+
+                if self.time_waiting_diagnosis >= \
+                self.__max_time_waiting_diagnosis:
+
+                    self.diagnosed = True
+
+                    self.waiting_diagnosis = False
+
+                    self.time_waiting_diagnosis = None
+
+                    delattr(self, '_Agent__max_time_waiting_diagnosis')
+
+                    self.time_after_being_diagnosed = 0
+
+                    self.quarantine_by_diagnosis(previous_diagnosis_state)
+
+            elif self.diagnosed:
+                # Agent is diagnosed
+
+                self.time_after_being_diagnosed += dt
+
+                if self.__quarantine_time_after_being_diagnosed:
+
+                    if self.time_after_being_diagnosed >= \
+                    self.__quarantine_time_after_being_diagnosed:
+
+                        self.time_after_being_diagnosed = None
+
+                        self.diagnosed = False
+
+                        self.waiting_diagnosis = False
+
+                        self.time_waiting_diagnosis = None
+
+                        delattr(self, '_Agent__quarantine_time_after_being_diagnosed')
+
+                        self.quarantine_by_diagnosis(previous_diagnosis_state)
+
+            else:
                 self.diagnosed = False
 
                 self.waiting_diagnosis = False
 
                 self.time_waiting_diagnosis = None
 
+                self.quarantine_by_diagnosis(previous_diagnosis_state)
 
-    def update_hospitalization_state(self):
+
+    def update_hospitalization_state(
+        self,
+        dt: int,
+        hospitals: dict,
+        hospitals_spatial_tree,
+        hospitals_labels
+        ):
         """
         """
-        # Agent could be hospitalized ?
+        if self.disease_state == 'dead' and self.is_hospitalized:
+            hospitals[self.hospital_label].remove_agent_from_UCI(self.agent)
+            hospitals[self.hospital_label].remove_hospilized_agent(self.agent)
+            return hospitals
+
+        previous_hospitalization_state = self.is_hospitalized
+        previous_UCI_state = self.is_in_UCI
+
+        # Retrieve agent location
+        agent_location = [self.x, self.y]
+
+        # Agent should be hospitalized ?
         if self.__hospitalization_of_disease_states_by_vulnerability_group[
-        self.vulnerability_group][self.disease_state]['could_be_hospitalized']:
+        self.vulnerability_group][self.disease_state]['should_be_hospitalized']:
 
-            if not self.is_hospitalized:
+            #=============================================
+            if not self.needs_hospitalization:
 
                 #=============================================
-                # Verify: is hospitalized ? ... Throw the dice
+                # Check if needs hospitalization ... Throw the dice
                 dice = np.random.random_sample()
 
                 if dice <= \
                 self.__hospitalization_of_disease_states_by_vulnerability_group[
                 self.vulnerability_group][self.disease_state]['hospitalization_probability']:
 
-                    # Agent is hospitalized !!!
-                    # TODO change to "needs_hospitalization"
+                    # Agent needs hospitalization !!!
+                    self.needs_hospitalization = True
+                    self.time_waiting_hospitalization = 0
+
+            #=============================================
+            if self.needs_hospitalization and not self.is_hospitalized:
+
+                nearest_hospital_index = \
+                    hospitals_spatial_tree.query(agent_location)[1]
+
+                nearest_hospital_label = hospitals_labels[nearest_hospital_index]
+
+                agent_was_added = hospitals[nearest_hospital_label].add_hospilized_agent(self.agent)
+
+                if agent_was_added:
                     self.is_hospitalized = True
+                    self.hospital_label = nearest_hospital_label
+                    self.needs_hospitalization = False
+                    self.time_waiting_hospitalization = None
 
+                    [self.x, self.y] = hospitals[self.hospital_label].get_hospital_location()
+                    self.vx = 0.
+                    self.vy = 0.
+                else:
+                    self.is_hospitalized = False
+                    self.time_waiting_hospitalization += dt
+
+                    # Disease transition
+                    self.disease_states_transitions_by_hospitalization_unavailability()
+
+            #=============================================
+            if (self.is_hospitalized
+            and self.__hospitalization_of_disease_states_by_vulnerability_group[
+            self.vulnerability_group][self.disease_state]['UCI_probability'] is not 0.0):
+
+                if not self.needs_UCI and not self.is_in_UCI:
                     #=============================================
                     # Verify: needs UCI ? ... Throw the dice
                     dice = np.random.random_sample()
@@ -587,34 +928,139 @@ class Agent:
                     self.vulnerability_group][self.disease_state]['UCI_probability']:
 
                         # Agent needs UCI !!!
-                        # TODO change to "needs_UCI"
+                        self.needs_UCI = True
+                        self.time_waiting_UCI = 0
+
+                #=============================================
+                if self.needs_UCI and not self.is_in_UCI:
+
+                    agent_was_added = hospitals[self.hospital_label].add_agent_to_UCI(self.agent)
+
+                    if agent_was_added:
                         self.is_in_UCI = True
+                        self.needs_UCI = False
+                        self.time_waiting_UCI = None
+                    else:
+                        self.is_in_UCI = False
+                        self.time_waiting_UCI += dt
 
-            else:
-                # Agent is hospitalized
+                        # Disease transition
+                        self.disease_states_transitions_by_UCI_unavailability()
 
-                if not self.is_in_UCI:
+            #=============================================
+            if (self.is_hospitalized
+            and self.__hospitalization_of_disease_states_by_vulnerability_group[
+            self.vulnerability_group][self.disease_state]['UCI_probability'] == 0.0):
 
-                    #=============================================
-                    # Verify: needs UCI ? ... Throw the dice
-                    dice = np.random.random_sample()
+                # Agen should not be in UCI but should remain hospitalized
+                self.needs_UCI = False
+                self.is_in_UCI = False
+                self.time_waiting_UCI = None
 
-                    if dice <= \
-                    self.__hospitalization_of_disease_states_by_vulnerability_group[
-                    self.vulnerability_group][self.disease_state]['UCI_probability']:
+                if previous_UCI_state:
+                    hospitals[self.hospital_label].remove_agent_from_UCI(self.agent)
 
-                        # Agent needs UCI !!!
-                        self.is_in_UCI = True
         else:
-            # Agent could not be hospitalized ?
+            # Agent should not be hospitalized
+            self.needs_hospitalization = False
             self.is_hospitalized = False
+            self.time_waiting_hospitalization = None
 
+            if previous_hospitalization_state:
+                hospitals[self.hospital_label].remove_hospilized_agent(self.agent)
+
+                # TODO
+                # Change this positions in order to use random
+                # if hospital location is None
+                if self.x == None:
+                    self.x = 0.
+                if self.y == None:
+                    self.y = 0.
+
+                # Define velocity between (0 , vmax)
+                self.initialize_velocity()
+
+            self.needs_UCI = False
             self.is_in_UCI = False
+            self.time_waiting_UCI = None
+
+            if previous_UCI_state:
+                hospitals[self.hospital_label].remove_agent_from_UCI(self.agent)
+
+            self.hospital_label = None
+
+        return hospitals
+
+
+    def trace_neighbors(
+        self,
+        spatial_trees_by_disease_state: dict,
+        agents_indices_by_disease_state: dict
+        ):
+        """
+        """
+        # Initialize
+        self.susceptible_neighbors = []
+        self.infected_neighbors = np.array([])
+        self.inmune_neighbors = []
+        self.total_neighbors = []
+
+        # Retrieve agent location
+        agent_location = [self.x, self.y]
+
+        # Excluded states for neighbors search
+        excluded_states = ['death']
+
+        # Cycle through each state of the neighbors
+        for disease_state in set(self.__disease_states) - set(excluded_states):
+
+            if spatial_trees_by_disease_state[disease_state]:
+
+                # Detect if any agent in "disease_state" is inside a distance
+                # equal to the corresponding spread_radius
+                points_inside_radius = \
+                    spatial_trees_by_disease_state[disease_state].query_ball_point(
+                        agent_location,
+                        self.__trace_radius[disease_state]
+                        )
+
+                if disease_state == 'susceptible':
+                    self.susceptible_neighbors = \
+                        agents_indices_by_disease_state['susceptible'][points_inside_radius]
+
+                elif disease_state == 'inmune':
+                    self.inmune_neighbors = \
+                        agents_indices_by_disease_state['susceptible'][points_inside_radius]
+
+                elif self.__dynamics_of_disease_states_contagion[
+                disease_state]['is_infected']:
+                    # If not susceptible and not inmune
+                    # then it must be infected
+
+                    infected_neighbors = \
+                        agents_indices_by_disease_state[disease_state][points_inside_radius]
+
+                    if len(infected_neighbors) is not 0:
+
+                        np.concatenate(
+                            (self.infected_neighbors, infected_neighbors),
+                            axis=None
+                            )
+                else:
+                    # print error ?
+                    pass
+
+        # ndarray to list
+        self.infected_neighbors = self.infected_neighbors.tolist()
+
+        # Extend total_neighbors
+        self.total_neighbors.extend(self.susceptible_neighbors)
+        self.total_neighbors.extend(self.inmune_neighbors)
+        self.total_neighbors.extend(self.infected_neighbors)
 
 
     def update_alertness_state(
         self,
-        step: int,
         spatial_trees_by_disease_state: dict,
         agents_indices_by_disease_state: dict,
         population_positions: dict,
@@ -622,21 +1068,18 @@ class Agent:
         ):
         """
         """
-        # Initialize agent alertness
+        # Initialize
+        self.avoidable_neighbors = np.array([])
         self.alertness = False
-        self.contacted_with = []
         self.alerted_by = []
+
+        # Retrieve agent location
+        agent_location = [self.x, self.y]
 
         #=============================================
         # Agent should be alert?
         if self.__dynamics_of_alertness_of_disease_states_by_vulnerability_group[
             self.vulnerability_group][self.disease_state]['should_be_alert']:
-            
-            # Retrieve agent location
-            agent_location = [self.x, self.y]
-
-            # Initialize "contadted with"
-            contacted_with = []
 
             # Initialize "alerted by"
             alerted_by = []
@@ -650,11 +1093,10 @@ class Agent:
                 # which state is avoidable
                 if (self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
                     self.vulnerability_group][disease_state]['avoidable_agent']
-                    and spatial_trees_by_disease_state[disease_state]
-                    ):
-                    
+                    and spatial_trees_by_disease_state[disease_state]):
+
                     # Detect if any avoidable agent is inside a distance
-                    # equal to the corresponding spread_radius
+                    # equal to the corresponding avoidness_radius
                     points_inside_radius = \
                         spatial_trees_by_disease_state[disease_state].query_ball_point(
                             agent_location,
@@ -662,25 +1104,26 @@ class Agent:
                             self.vulnerability_group][disease_state]['avoidness_radius']
                             )
 
-                    avoidable_indices_inside_radius = \
+                    avoidable_neighbors = \
                         agents_indices_by_disease_state[disease_state][points_inside_radius]
-                    
-                    # If agent_index in avoidable_indices_inside_radius,
+
+                    # If agent_index in avoidable_neighbors
                     # then remove it
-                    if self.agent in avoidable_indices_inside_radius:
-                        
-                        avoidable_indices_inside_radius = np.setdiff1d(
-                            avoidable_indices_inside_radius,
+                    if self.agent in avoidable_neighbors:
+
+                        avoidable_neighbors = np.setdiff1d(
+                            avoidable_neighbors,
                             self.agent
                             )
 
-                    if len(avoidable_indices_inside_radius) is not 0:
+                    if len(avoidable_neighbors) is not 0:
 
-                        # Append avoidable_indices_inside_radius array
-                        # to self.contacted_with
-                        self.contacted_with = avoidable_indices_inside_radius
-                        
-                        for avoidable_agent_index in avoidable_indices_inside_radius:
+                        np.concatenate(
+                            (self.avoidable_neighbors, avoidable_neighbors),
+                            axis=None
+                            )
+
+                        for avoidable_agent_index in avoidable_neighbors:
 
                             # Must agent be alert ? ... Throw the dice
                             dice = np.random.random_sample()
@@ -732,7 +1175,9 @@ class Agent:
         ):
         """
         """
-        if not self.is_hospitalized:
+        if (not self.is_hospitalized
+        and self.quarantine_state == 'Not in quarantine'):
+
             #=============================================
             # Starting parameters
 
@@ -883,7 +1328,7 @@ class Agent:
     def move(
         self,
         dt: float,
-        maximum_free_random_speed: float,
+        maximum_free_random_speed_factor: float,
         xmin: float,
         xmax: float,
         ymin: float,
@@ -891,13 +1336,15 @@ class Agent:
         ):
         """
         """
-        #=============================================
-        # Avoid frontier
-        self.avoid_frontier(dt, xmin, xmax, ymin, ymax)
+        if self.quarantine_state == 'Not in quarantine':
 
-        #=============================================
-        # Physical movement
-        self.physical_movement(dt, maximum_free_random_speed)
+            #=============================================
+            # Avoid frontier
+            self.avoid_frontier(dt, xmin, xmax, ymin, ymax)
+
+            #=============================================
+            # Physical movement
+            self.physical_movement(dt, maximum_free_random_speed_factor)
 
 
     def avoid_frontier(
@@ -931,7 +1378,7 @@ class Agent:
     def physical_movement(
         self,
         dt: float,
-        maximum_free_random_speed: float
+        maximum_free_random_speed_factor: float
         ):
         """
         """
@@ -942,56 +1389,117 @@ class Agent:
             self.y = self.y + self.vy * dt
 
 
-            if not self.alertness:
-                #=============================================
-                # Evolve velocity as a random walk
-                dvx = maximum_free_random_speed * np.random.random_sample() \
-                    - maximum_free_random_speed/2
-                self.vx = self.vx + dvx
+            #=============================================
+            # Evolve velocity as a random walk
 
-                dvy = maximum_free_random_speed * np.random.random_sample() \
-                    - maximum_free_random_speed/2
-                self.vy = self.vy + dvy
+            v_squared_norm = self.vx**2 + self.vy**2
+
+            v_norm = np.sqrt(v_squared_norm)
+
+            # sin_theta = self.vy / v_norm if self.vy < v_norm else 1.0
+
+            # current_theta = np.arcsin(sin_theta)
+
+            random_factor = 2 * np.random.random_sample() - 1 # [-1, 1)
+
+            dv = maximum_free_random_speed_factor * v_norm * random_factor
+
+            # The angle can be whatever between [0, 2 pi)
+            dtheta = 2. * np.pi * np.random.random_sample()
+
+            dvx, dvy = [dv * np.cos(dtheta), dv * np.sin(dtheta)]
+
+            new_vx = self.vx + dvx
+            new_vy = self.vy + dvy
+
+            new_v_norm = np.sqrt(new_vx**2 + new_vy**2)
+
+            if new_v_norm <= self.vmax:
+                self.vx, self.vy = [new_vx, new_vy]
+            else:
+                sin_new_theta = new_vy / new_v_norm if new_vy < new_v_norm else 1.0
+
+                new_theta = np.arcsin(sin_new_theta)
+
+                self.vx, self.vy = [
+                    self.vmax * np.cos(new_theta),
+                    self.vmax * np.sin(new_theta)
+                    ]
 
 
-    def individual_quarantine_function(
+    def quarantine_by_diagnosis(
         self,
         previous_diagnosis_state: bool
         ):
-        """
         if previous_diagnosis_state and self.diagnosed:
             pass
         elif not previous_diagnosis_state and self.diagnosed:
-            self.vx = 0.
-            self.vy = 0.
+
+            # Is agent obedient ? ... Throw the dice
+            dice = np.random.random_sample()
+
+            if dice <= self.obedience_to_quarantine:
+                self.quarantine_state = 'Quarantine by diagnosis'
+                self.vx = 0.
+                self.vy = 0.
+            else:
+                self.quarantine_state = 'Quarantine by diagnosis - Disobedient'
+
         elif previous_diagnosis_state and not self.diagnosed:
-            # Define velocity between (-vmax , +vmax)
-            self.vx, self.vy = 2. * self.__vmax * np.random.random_sample(dim) - self.__vmax
+
+            self.quarantine_state = 'Not in quarantine'
+
+            # Define velocity between (0 , vmax)
+            self.initialize_velocity()
+
         else:
             # not previous_diagnosis_state and not self.diagnosed
             pass
-        """
-        pass
 
 
-    def hospitalization_function(
+    def quarantine_by_government_decrees(
         self,
-        previous_hospitalization_state: bool
+        decreed_quarantine: bool,
+        groups_in_quarantine: list
         ):
         """
         """
-        if previous_hospitalization_state and self.is_hospitalized:
-            pass
-        elif not previous_hospitalization_state and self.is_hospitalized:
-            self.x = 0.
-            self.y = 0.
-            self.vx = 0.
-            self.vy = 0.
-        elif previous_hospitalization_state and not self.is_hospitalized:
-            self.x = 0.
-            self.y = 0.
-            # Define velocity between (-vmax , +vmax)
-            self.vx, self.vy = 2. * self.__vmax * np.random.random_sample(dim) - self.__vmax
-        else:
-            # not previous_hospitalization_state and not self.is_hospitalized
-            pass
+        if self.quarantine_state not in {
+            'Quarantine by diagnosis', 
+            'Quarantine by diagnosis - Disobedient'
+            }:
+
+            if decreed_quarantine:
+
+                if self.quarantine_group in groups_in_quarantine:
+
+                    if self.quarantine_state == 'Not in quarantine':
+
+                        # Is agent obedient ? ... Throw the dice
+                        dice = np.random.random_sample()
+
+                        if dice <= self.obedience_to_quarantine:
+                            self.quarantine_state = 'Quarantine by government'
+                            self.vx = 0.
+                            self.vy = 0.
+                        else:
+                            self.quarantine_state = 'Quarantine by government - Disobedient'
+
+                else:
+                    if self.quarantine_state == 'Quarantine by government':
+
+                        self.quarantine_state = 'Not in quarantine'
+
+                        # Define velocity between (0 , vmax)
+                        self.initialize_velocity()
+
+                    if self.quarantine_state == 'Quarantine by government - Disobedient':
+                        self.quarantine_state = 'Not in quarantine'
+
+            else:
+                if self.quarantine_state != 'Not in quarantine':
+                    self.quarantine_state = 'Not in quarantine'
+
+
+
+
