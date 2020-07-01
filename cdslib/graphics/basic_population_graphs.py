@@ -334,11 +334,30 @@ class BasicPopulationGraphs:
     # Change velocity, frames, menu, axis labels
     def animate_population(
         self,
-        filename: str=None,
-        show_figure: bool=True
+        show_figure: bool=True,
+        fig_name: str='animation',
+        save_fig: bool=False,
+        fig_path: str='.'
         ):
         """
         """
+        if save_fig:
+            #=============================================
+            # Validate fig_format
+
+            valid_fig_format = \
+                {'html'}
+
+            if fig_format not in valid_fig_format:
+                ErrorString = (
+                    f'[ERROR] "fig_format" must be one of:'
+                    '\n'
+                    f'\t{valid_fig_format}'
+                    )
+                raise ValueError(ErrorString)
+
+        #=============================================
+
         t_list = list(set(self.agents_info_df['step'].to_list()))
 
         # Copy dataframe
@@ -415,9 +434,12 @@ class BasicPopulationGraphs:
         
         fig.update_layout(showlegend=False)
 
-        if filename:
-            fig.write_html(filename + '.html')
+        # Save figure
+        if save_fig:
+            fig_filename = os.path.join(fig_path, fig_name)
+            fig.write_html(fig_filename + '.html')
 
+        # Show figure
         if show_figure:
             fig.show()
 
