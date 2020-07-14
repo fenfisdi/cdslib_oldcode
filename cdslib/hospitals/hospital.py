@@ -74,7 +74,7 @@ class Hospital:
         ):
         """
         """
-        self.agents_hospitalized.append(agent_index)
+        self.agents_hospitalized.remove(agent_index)
         self.current_hospitalization_capacity += 1
 
 
@@ -84,7 +84,7 @@ class Hospital:
         ):
         """
         """
-        self.agents_in_UCI.append(agent_index)
+        self.agents_in_UCI.remove(agent_index)
         self.current_UCI_capacity += 1
 
 
