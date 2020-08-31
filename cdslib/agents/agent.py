@@ -858,9 +858,12 @@ class Agent:
         """
         """
         if self.disease_state == 'dead' and self.is_hospitalized:
-            hospitals[self.hospital_label].remove_agent_from_UCI(self.agent)
             hospitals[self.hospital_label].remove_hospilized_agent(self.agent)
-            return hospitals
+            if self.is_in_UCI:
+                hospitals[self.hospital_label].remove_agent_from_UCI(self.agent)
+                return hospitals
+            else:
+                return hospitals
 
         previous_hospitalization_state = self.is_hospitalized
         previous_UCI_state = self.is_in_UCI
