@@ -449,7 +449,8 @@ class BasicPopulationGraphs:
         x: list,
         y: list,
         name: str,
-        mode: str='lines'
+        mode: str='lines',
+        color=None
         ):
         """
         """
@@ -465,13 +466,24 @@ class BasicPopulationGraphs:
                 name=name
                 )
         else:
-            return go.Scatter(
-                x=x,
-                y=y,
-                mode=mode,
-                connectgaps=False,
-                name=name
-                )
+            if color is None:
+                return go.Scatter(
+                    x=x,
+                    y=y,
+                    mode=mode,
+                    connectgaps=False,
+                    name=name
+                    )
+            else:
+                # color is not None
+                return go.Scatter(
+                    x=x,
+                    y=y,
+                    mode=mode,
+                    connectgaps=False,
+                    line=color,
+                    name=name
+                    )
 
 
     def disease_states_times_series_plot(
@@ -848,6 +860,201 @@ class BasicPopulationGraphs:
                     y=wide_format_df[state].to_list(),
                     name=state,
                     mode='lines' if state is not 'dead' else 'markers'
+                )
+            )
+
+        # Add slider
+        fig.update_xaxes(rangeslider_visible=True)
+        fig.update_yaxes(autorange=True, fixedrange=False)
+
+        # Set up hover
+        fig.update_layout(hovermode='x unified')
+
+        # Save figure
+        if save_fig:
+            fig_filename = os.path.join(fig_path, fig_name)
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format == 'html':
+                        fig.write_html(fig_filename + '.html')
+                    else:
+                        fig.write_image(fig_filename + f'.{single_fig_format}')
+            else:
+                if fig_format == 'html':
+                    fig.write_html(fig_filename + '.html')
+                else:
+                    fig.write_image(fig_filename + f'.{fig_format}')
+
+        # Show figure
+        if show_figure:
+            fig.show()
+
+
+    def joined_states_times_series_plot(
+        self,
+        joined_states: dict,
+        joined_states_colors: dict,
+        y_format: str='percentage',
+        # show_those_infected_diagnosed: bool=True, ? TODO
+        time_format: str='datetime',
+        show_figure: bool=True,
+        fig_name: str='infection_times_series',
+        fig_title: str='Infection time series',
+        save_fig: bool=False,
+        fig_path: str='.',
+        fig_format='html', # str or list
+        save_csv: bool=False,
+        csv_path: str='.',
+        dataframe_format: str='long'
+        ):
+        """
+        """
+        #=============================================
+        # Validate y_format
+
+        valid_y_format = {'percentage', 'number'}
+
+        if y_format not in valid_y_format:
+            ErrorString = (
+                f'[ERROR] "y_format" must be one of:'
+                '\n'
+                f'\t{valid_y_format}'
+                )
+            raise ValueError(ErrorString)
+
+        #=============================================
+        # Validate time_format
+
+        valid_time_format = {'step', 'datetime'}
+
+        if time_format not in valid_time_format:
+            ErrorString = (
+                f'[ERROR] "time_format" must be one of:'
+                '\n'
+                f'\t{valid_time_format}'
+                )
+            raise ValueError(ErrorString)
+
+        if save_fig:
+            #=============================================
+            # Validate fig_format
+
+            valid_fig_format = \
+                {'html', 'png', 'jpeg', 'webp', 'svg', 'pdf', 'eps'}
+
+            if isinstance(fig_format, list):
+
+                for single_fig_format in fig_format:
+
+                    if single_fig_format not in valid_fig_format:
+                        ErrorString = (
+                            f'[ERROR] "fig_format" must be one of:'
+                            '\n'
+                            f'\t{valid_fig_format}'
+                            )
+                        raise ValueError(ErrorString)
+            else:
+                if fig_format not in valid_fig_format:
+                    ErrorString = (
+                        f'[ERROR] "fig_format" must be one of:'
+                        '\n'
+                        f'\t{valid_fig_format}'
+                        )
+                    raise ValueError(ErrorString)
+
+        if save_csv:
+            #=============================================
+            # Validate dataframe_format
+
+            valid_dataframe_format = {'long', 'wide'}
+
+            if dataframe_format not in valid_dataframe_format:
+                ErrorString = (
+                    f'[ERROR] "dataframe_format" must be one of:'
+                    '\n'
+                    f'\t{valid_dataframe_format}'
+                    )
+                raise ValueError(ErrorString)
+
+        #=============================================
+        # Prepare dataframe
+
+        joined_states_df = self.agents_info_df.copy()
+
+        joined_states_df['state'] = joined_states_df['disease_state'].apply(
+            lambda x: joined_states[x]
+            )
+
+        df = joined_states_df[[time_format, 'agent', 'state']].groupby(
+                [time_format, 'state'],
+                as_index=False
+                ).count()
+
+        if y_format == 'percentage':
+            df.rename(
+                columns={'agent': 'agents_pct'},
+                inplace=True
+                )
+
+            df['agents_pct'] = df['agents_pct']/self.initial_population_number 
+        else:
+            # y_format == 'number'
+            df.rename(
+                columns={'agent': 'agents'},
+                inplace=True
+                )
+
+        # Retrieve states
+        states = df['state'].unique()
+
+        # dataframe in long format
+        long_format_df = df
+
+        # Reshape df to wide format
+        wide_format_df = pd.pivot_table(
+            data=df,
+            index=time_format,
+            columns='state',
+            values='agents_pct' if y_format == 'percentage' else 'agents'
+            )
+
+        wide_format_df.columns.name = None
+        wide_format_df.reset_index(inplace=True)
+
+        # Save csv
+        if save_csv:
+            csv_filename = os.path.join(csv_path, fig_name)
+
+            if dataframe_format == 'long':
+                long_format_df.to_csv(csv_filename + '.csv', index=False)
+            
+            if dataframe_format == 'wide':
+                wide_format_df.to_csv(csv_filename + '.csv', index=False)
+
+        #=============================================
+        # Plot
+
+        # Set up plot
+        fig = go.Figure(
+            layout=go.Layout(
+                title=fig_title,
+                xaxis_title=time_format,
+                yaxis_title='Percentage of agents' if y_format == 'percentage' else 'Number of agents'
+                )
+            )
+
+        # Add traces
+        for state in states:
+            fig.add_trace(
+                self.go_line(
+                    x=wide_format_df[time_format].to_list(),
+                    y=wide_format_df[state].to_list(),
+                    name=state,
+                    mode='lines' if state is not 'dead' else 'markers',
+                    color=joined_states_colors[state]
                 )
             )
 
