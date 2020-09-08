@@ -780,8 +780,8 @@ class BasicPopulationGraphs:
             # Show those infected diagnosed
             prev_df_1 = infection_df.loc[
                 (infection_df['diagnosed'] == True)
-                &
-                (infection_df['infection_state'] == 'infected')
+                # &
+                # (infection_df['infection_state'] == 'infected')
             ][[time_format, 'infection_state', 'agent']]
 
             prev_df_1.replace(
