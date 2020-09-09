@@ -32,9 +32,14 @@ Install with the command
   - Virus halo ... Probability density
   - Change probability of transition state by exposition to virus
 
+- `update_diagnosis_state()`
+  - Improve the case when `self.__quarantine_after_being_diagnosed_enabled == False`
+  to model the time that has to pass before to be diagnosed again ... Right now
+  it is an infinite time.
+
 - `update_hospitalization_state()`
   - When an agent is removed from hospitalization, change the positions assigned
   in order to use random if hospital location is None
 
-- Fix `population_df_path`
+- Fix `population_df_path` ... It seems that the problem was due to visual code
 

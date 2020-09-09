@@ -698,9 +698,14 @@ class Agent:
                             self.__diagnosis_of_disease_states_by_vulnerability_group[
                                 self.vulnerability_group][self.disease_state]['diagnosis_time']
 
+                        self.__quarantine_after_being_diagnosed_enabled = \
+                            self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                self.vulnerability_group][self.disease_state]['quarantine_after_being_diagnosed_enabled']
+
                         self.__quarantine_time_after_being_diagnosed = \
                             self.__diagnosis_of_disease_states_by_vulnerability_group[
-                                self.vulnerability_group][self.disease_state]['diagnosis_time']
+                                self.vulnerability_group][self.disease_state]['quarantine_time_after_being_diagnosed']
+
 
                 else:
                     # Agent is waiting diagnosis
@@ -722,14 +727,15 @@ class Agent:
 
                         self.time_after_being_diagnosed = 0
 
-                        self.quarantine_by_diagnosis(previous_diagnosis_state)
+                        if self.__quarantine_after_being_diagnosed_enabled:
+                            self.quarantine_by_diagnosis(previous_diagnosis_state)
 
             else:
                 # Agent is diagnosed
 
                 self.time_after_being_diagnosed += dt
 
-                if self.__quarantine_time_after_being_diagnosed:
+                if self.__quarantine_after_being_diagnosed_enabled:
 
                     if self.time_after_being_diagnosed >= \
                     self.__quarantine_time_after_being_diagnosed:
@@ -752,9 +758,13 @@ class Agent:
                                     self.__diagnosis_of_disease_states_by_vulnerability_group[
                                         self.vulnerability_group][self.disease_state]['diagnosis_time']
 
+                                self.__quarantine_after_being_diagnosed_enabled = \
+                                    self.__diagnosis_of_disease_states_by_vulnerability_group[
+                                        self.vulnerability_group][self.disease_state]['quarantine_after_being_diagnosed_enabled']
+
                                 self.__quarantine_time_after_being_diagnosed = \
                                     self.__diagnosis_of_disease_states_by_vulnerability_group[
-                                        self.vulnerability_group][self.disease_state]['diagnosis_time']
+                                        self.vulnerability_group][self.disease_state]['quarantine_time_after_being_diagnosed']
 
                             else:
                                 # Agent was not diagnosed again !!!
@@ -765,9 +775,12 @@ class Agent:
 
                                 self.time_waiting_diagnosis = None
 
-                                delattr(self, '_Agent__quarantine_time_after_being_diagnosed')
-
+                                # self.__quarantine_after_being_diagnosed_enabled == True
                                 self.quarantine_by_diagnosis(previous_diagnosis_state)
+
+                                delattr(self, '_Agent__quarantine_after_being_diagnosed_enabled')
+
+                                delattr(self, '_Agent__quarantine_time_after_being_diagnosed')
 
                         else:
                             # Agent is waiting diagnosis
@@ -789,8 +802,11 @@ class Agent:
 
                                 self.time_after_being_diagnosed = 0
 
+                                # self.__quarantine_after_being_diagnosed_enabled == True
                                 self.quarantine_by_diagnosis(previous_diagnosis_state)
-
+                else:
+                    # self.__quarantine_after_being_diagnosed_enabled == False
+                    pass
         else:
             # Agent current disease state cannot be diagnosed
 
@@ -821,7 +837,7 @@ class Agent:
 
                 self.time_after_being_diagnosed += dt
 
-                if self.__quarantine_time_after_being_diagnosed:
+                if self.__quarantine_after_being_diagnosed_enabled:
 
                     if self.time_after_being_diagnosed >= \
                     self.__quarantine_time_after_being_diagnosed:
@@ -834,9 +850,16 @@ class Agent:
 
                         self.time_waiting_diagnosis = None
 
+                        # self.__quarantine_after_being_diagnosed_enabled == True
+                        self.quarantine_by_diagnosis(previous_diagnosis_state)
+
+                        delattr(self, '_Agent__quarantine_after_being_diagnosed_enabled')
+
                         delattr(self, '_Agent__quarantine_time_after_being_diagnosed')
 
-                        self.quarantine_by_diagnosis(previous_diagnosis_state)
+                else:
+                    # self.__quarantine_after_being_diagnosed_enabled == False
+                    pass
 
             else:
                 self.diagnosed = False
