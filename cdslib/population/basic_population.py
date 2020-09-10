@@ -1098,7 +1098,7 @@ class BasicPopulation:
             self.spatial_tress_by_disease_state()
 
         #=============================================
-        # Create KDTree for agents of each state
+        # Retrieve population positions and velocities for agents of each state
         population_positions, population_velocities = \
             self.retrieve_population_positions_and_velocities()
 

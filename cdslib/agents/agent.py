@@ -153,22 +153,40 @@ class Agent:
             setattr(self, '_Agent__' + key, value)
 
 
-        # Create a dictionary of radius for trace neighbors function
-        radius_list = []
+        # Retrieve maximum radius for trace_neighbors function
+        spread_radius_list = []
+
         for dis_state in self.__disease_states:
-            radius_list.append(
+
+            spread_radius_list.append(
                 self.__dynamics_of_disease_states_contagion[
                 dis_state]['spread_radius']
                 )
-        radius_arr = np.array(radius_list, dtype=np.float)
-        radius_arr = np.nan_to_num(radius_arr, nan=-np.inf)
-        max_radius = radius_arr.max()
-        radius_arr = np.nan_to_num(radius_arr, neginf=max_radius)
 
-        self.__trace_radius = {
-            dis_state: radius_arr[i]
-            for i, dis_state in enumerate(self.__disease_states)
-            }
+
+        avoidness_radius_list = []
+
+        for vul_group in self.__vulnerability_groups:
+
+            for dis_state in self.__disease_states:
+
+                avoidness_radius_list.append(
+                    self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
+                    vul_group][dis_state]['avoidness_radius']
+                    )
+
+        spread_radius_arr = np.array(spread_radius_list, dtype=np.float)
+        spread_radius_arr = np.nan_to_num(spread_radius_arr, nan=-np.inf)
+        max_spread_radius = spread_radius_arr.max()
+
+        avoidness_radius_arr = np.array(avoidness_radius_list, dtype=np.float)
+        avoidness_radius_arr = np.nan_to_num(avoidness_radius_arr, nan=-np.inf)
+        max_avoidness_radius = avoidness_radius_arr.max()
+
+        self.tracing_radius = np.maximum(
+            max_spread_radius,
+            max_avoidness_radius
+            )
 
         # Define vmax
         self.vmax = vmax
@@ -229,7 +247,9 @@ class Agent:
 
         self.susceptible_neighbors: list = []
 
-        self.infected_neighbors: list = []
+        self.infected_spreader_neighbors: list = []
+
+        self.infected_non_spreader_neighbors: list = []
 
         self.inmune_neighbors: list = []
 
@@ -804,6 +824,7 @@ class Agent:
 
                                 # self.__quarantine_after_being_diagnosed_enabled == True
                                 self.quarantine_by_diagnosis(previous_diagnosis_state)
+
                 else:
                     # self.__quarantine_after_being_diagnosed_enabled == False
                     pass
@@ -829,8 +850,9 @@ class Agent:
                     delattr(self, '_Agent__max_time_waiting_diagnosis')
 
                     self.time_after_being_diagnosed = 0
-
-                    self.quarantine_by_diagnosis(previous_diagnosis_state)
+                    
+                    if self.__quarantine_after_being_diagnosed_enabled:
+                        self.quarantine_by_diagnosis(previous_diagnosis_state)
 
             elif self.diagnosed:
                 # Agent is diagnosed
@@ -1027,7 +1049,8 @@ class Agent:
         """
         # Initialize
         self.susceptible_neighbors = []
-        self.infected_neighbors = np.array([])
+        self.infected_spreader_neighbors = np.array([])
+        self.infected_non_spreader_neighbors = np.array([])
         self.inmune_neighbors = []
         self.total_neighbors = []
 
@@ -1047,42 +1070,64 @@ class Agent:
                 points_inside_radius = \
                     spatial_trees_by_disease_state[disease_state].query_ball_point(
                         agent_location,
-                        self.__trace_radius[disease_state]
+                        self.tracing_radius
                         )
 
+                agents_indices_inside_radius = agents_indices_by_disease_state[
+                    disease_state][points_inside_radius]
+
+                agents_indices_inside_radius = np.setdiff1d(
+                    agents_indices_inside_radius,
+                    self.agent
+                    )
+
                 if disease_state == 'susceptible':
-                    self.susceptible_neighbors = \
-                        agents_indices_by_disease_state['susceptible'][points_inside_radius]
+                    self.susceptible_neighbors = agents_indices_inside_radius.tolist()
 
                 elif disease_state == 'inmune':
-                    self.inmune_neighbors = \
-                        agents_indices_by_disease_state['inmune'][points_inside_radius]
+                    self.inmune_neighbors = agents_indices_inside_radius.tolist()
 
                 elif self.__dynamics_of_disease_states_contagion[
                 disease_state]['is_infected']:
                     # If not susceptible and not inmune
                     # then it must be infected
 
-                    infected_neighbors = \
-                        agents_indices_by_disease_state[disease_state][points_inside_radius]
+                    if self.__dynamics_of_disease_states_contagion[
+                    disease_state]['can_spread']:
 
-                    if len(infected_neighbors) is not 0:
+                        if len(agents_indices_inside_radius) is not 0:
 
-                        np.concatenate(
-                            (self.infected_neighbors, infected_neighbors),
-                            axis=None
-                            )
+                            self.infected_spreader_neighbors = np.concatenate(
+                                (self.infected_spreader_neighbors, agents_indices_inside_radius),
+                                axis=None
+                                )
+
+                    else:
+                        # self.__dynamics_of_disease_states_contagion[disease_state]['can_spread'] == False
+                        if len(agents_indices_inside_radius) is not 0:
+
+                            self.infected_non_spreader_neighbors = np.concatenate(
+                                (self.infected_non_spreader_neighbors, agents_indices_inside_radius),
+                                axis=None
+                                )
+
                 else:
                     # print error ?
                     pass
 
+        # float to int
+        self.infected_spreader_neighbors = self.infected_spreader_neighbors.astype(int)
+        self.infected_non_spreader_neighbors = self.infected_non_spreader_neighbors.astype(int)
+
         # ndarray to list
-        self.infected_neighbors = self.infected_neighbors.tolist()
+        self.infected_spreader_neighbors = self.infected_spreader_neighbors.tolist()
+        self.infected_non_spreader_neighbors = self.infected_non_spreader_neighbors.tolist()
 
         # Extend total_neighbors
         self.total_neighbors.extend(self.susceptible_neighbors)
         self.total_neighbors.extend(self.inmune_neighbors)
-        self.total_neighbors.extend(self.infected_neighbors)
+        self.total_neighbors.extend(self.infected_spreader_neighbors)
+        self.total_neighbors.extend(self.infected_non_spreader_neighbors)
 
 
     def update_alertness_state(
@@ -1144,7 +1189,7 @@ class Agent:
 
                     if len(avoidable_neighbors) is not 0:
 
-                        np.concatenate(
+                        self.avoidable_neighbors = np.concatenate(
                             (self.avoidable_neighbors, avoidable_neighbors),
                             axis=None
                             )
@@ -1167,6 +1212,12 @@ class Agent:
 
                                 # Append avoidable_agent_index in alerted_by
                                 alerted_by.append(avoidable_agent_index)
+
+            # float to int
+            self.avoidable_neighbors = self.avoidable_neighbors.astype(int)
+
+            # ndarray to list
+            self.avoidable_neighbors = self.avoidable_neighbors.tolist()
 
             #=============================================
             # Change movement direction if agent's alertness = True

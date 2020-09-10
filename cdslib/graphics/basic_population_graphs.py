@@ -85,7 +85,8 @@ class BasicPopulationGraphs:
         diagnosed = agent_dict['diagnosed']
         is_infected = agent_dict['is_infected']
         susceptible_neighbors = agent_dict['susceptible_neighbors']
-        infected_neighbors = agent_dict['infected_neighbors']
+        infected_spreader_neighbors = agent_dict['infected_spreader_neighbors']
+        infected_non_spreader_neighbors = agent_dict['infected_non_spreader_neighbors']
         avoidable_neighbors = agent_dict['avoidable_neighbors']
         alerted_by = agent_dict['alerted_by']
 
@@ -155,7 +156,9 @@ class BasicPopulationGraphs:
                     '<br>'
                     f'<b>Diagnosed</b>: {diagnosed}'
                     '<br>'
-                    f'<b>Infected neighbors</b>: {infected_neighbors}'
+                    f'<b>Infected spreader neighbors</b>: {infected_spreader_neighbors}'
+                    '<br>'
+                    f'<b>Infected non spreader neighbors</b>: {infected_non_spreader_neighbors}'
                     '<br>'
                     f'<b>Avoidable neighbors</b>: {avoidable_neighbors}'
                     '<br>'
@@ -337,6 +340,7 @@ class BasicPopulationGraphs:
         show_figure: bool=True,
         fig_name: str='animation',
         save_fig: bool=False,
+        fig_format='html', # str
         fig_path: str='.'
         ):
         """
@@ -437,7 +441,9 @@ class BasicPopulationGraphs:
         # Save figure
         if save_fig:
             fig_filename = os.path.join(fig_path, fig_name)
-            fig.write_html(fig_filename + '.html')
+
+            if fig_format == 'html':
+                fig.write_html(fig_filename + '.html')
 
         # Show figure
         if show_figure:
@@ -901,8 +907,8 @@ class BasicPopulationGraphs:
         # show_those_infected_diagnosed: bool=True, ? TODO
         time_format: str='datetime',
         show_figure: bool=True,
-        fig_name: str='infection_times_series',
-        fig_title: str='Infection time series',
+        fig_name: str='joined_states_times_series',
+        fig_title: str='Joined states time series',
         save_fig: bool=False,
         fig_path: str='.',
         fig_format='html', # str or list
