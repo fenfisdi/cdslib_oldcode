@@ -307,11 +307,9 @@ class Agent:
         ):
         """
         """
-        # Define velocity between (0 , vmax)
-        v = self.vmax * np.random.random_sample()
         theta = 2. * np.pi * np.random.random_sample()
 
-        self.vx, self.vy = [v * np.cos(theta), v * np.sin(theta)]
+        self.vx, self.vy = [self.vmax * np.cos(theta), self.vmax * np.sin(theta)]
 
 
     def determine_disease_state_time(self):

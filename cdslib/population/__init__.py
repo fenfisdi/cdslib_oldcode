@@ -1,1 +1,2 @@
 from cdslib.population.basic_population import BasicPopulation
+from cdslib.population.basic_population_2 import BasicPopulation2
