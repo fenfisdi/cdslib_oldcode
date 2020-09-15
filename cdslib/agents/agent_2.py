@@ -137,14 +137,21 @@ class Agent2(Agent):
         ):
         """
         """
-        nested_categorical_fields = \
-            vmax_constructor['nested_categorical_fields']
+        # Must vmax change ? ... Throw the dice
+        dice = np.random.random_sample()
 
-        nested_continous_fields = \
-            vmax_constructor['nested_continous_fields']
+        if (dice <= \
+            self.__vmax_change_probability_by_mobility_types[self.mobility_type]
+            ):
 
-        probability_distribution_function = \
-            vmax_constructor['probability_distribution_function']
+            nested_categorical_fields = \
+                vmax_constructor['nested_categorical_fields']
+
+            nested_continous_fields = \
+                vmax_constructor['nested_continous_fields']
+
+            probability_distribution_function = \
+                vmax_constructor['probability_distribution_function']
 
 
                 if len(nested_categorical_fields) is not 0:
