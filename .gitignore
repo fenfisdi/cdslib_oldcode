@@ -26,3 +26,7 @@ eggs/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Text editor
+
+*.vscode
