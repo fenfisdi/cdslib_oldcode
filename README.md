@@ -1,4 +1,5 @@
 # CDS Library
+
 Contagious Disease Simulation - Library
 
 ## Install
@@ -42,4 +43,3 @@ Install with the command
   in order to use random if hospital location is None
 
 - Fix `population_df_path` ... It seems that the problem was due to visual code
-
