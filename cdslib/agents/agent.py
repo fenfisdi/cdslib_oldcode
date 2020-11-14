@@ -97,9 +97,9 @@ class AgentsInfo:
                 'dynamics_of_disease_states_contagion'
                 ]
 
-        self.inmunization_level_gained_by_disease_by_vulnerability_group = \
+        self.immunization_level_gained_by_disease_by_vulnerability_group = \
             contagion_dynamics_info[
-                'inmunization_level_gained_by_disease_by_vulnerability_group'
+                'immunization_level_gained_by_disease_by_vulnerability_group'
                 ]
 
         # population_age_groups_info
@@ -138,9 +138,9 @@ class Agent:
         vulnerability_group: str,
         age: float,
         age_group: str,
-        inmunization_level: float,
+        immunization_level: float,
         quarantine_group: str,
-        obedience_to_quarantine: float,
+        adherence_to_quarantine: float,
         diagnosed: bool=False
         ):
         """
@@ -239,10 +239,10 @@ class Agent:
         self.infected_in_step: int = None
         self.infected_info: dict = {}
 
-        self.inmunization_level: float = inmunization_level
+        self.immunization_level: float = immunization_level
 
         self.quarantine_group: str = quarantine_group
-        self.obedience_to_quarantine: float = obedience_to_quarantine
+        self.adherence_to_quarantine: float = adherence_to_quarantine
         self.quarantine_state: str = 'Not in quarantine'
 
         self.susceptible_neighbors: list = []
@@ -251,7 +251,7 @@ class Agent:
 
         self.infected_non_spreader_neighbors: list = []
 
-        self.inmune_neighbors: list = []
+        self.immune_neighbors: list = []
 
         self.total_neighbors: list = []
 
@@ -344,7 +344,7 @@ class Agent:
             # Verify: becomes into ? ... Throw the dice
             dice = np.random.random_sample()
 
-            cummulative_probability = 0. + self.inmunization_level
+            cummulative_probability = 0. + self.immunization_level
 
             for (probability, becomes_into_disease_state) in sorted(
                 zip(
@@ -449,7 +449,7 @@ class Agent:
 
                     # Calculate joint probability for contagion
                     joint_probability = \
-                        (1.0 - self.inmunization_level) \
+                        (1.0 - self.immunization_level) \
                         * self.__contagion_probabilities_by_susceptibility_groups[
                             self.susceptibility_group] \
                         * self.__dynamics_of_disease_states_contagion[
@@ -475,7 +475,7 @@ class Agent:
                 # Verify: becomes into ? ... Throw the dice
                 dice = np.random.random_sample()
 
-                cummulative_probability = 0. + self.inmunization_level
+                cummulative_probability = 0. + self.immunization_level
 
                 for (probability, becomes_into_disease_state) in sorted(
                     zip(
@@ -523,7 +523,7 @@ class Agent:
                 # Verify: becomes into ? ... Throw the dice
                 dice = np.random.random_sample()
 
-                cummulative_probability = 0. + self.inmunization_level
+                cummulative_probability = 0. + self.immunization_level
 
                 for (probability, becomes_into_disease_state) in sorted(
                     zip(
@@ -569,7 +569,7 @@ class Agent:
                 # Verify: becomes into ? ... Throw the dice
                 dice = np.random.random_sample()
 
-                cummulative_probability = 0. + self.inmunization_level
+                cummulative_probability = 0. + self.immunization_level
 
                 for (probability, becomes_into_disease_state) in sorted(
                     zip(
@@ -659,20 +659,20 @@ class Agent:
         and not self.__dynamics_of_disease_states_contagion[becomes_into_disease_state]['is_infected']):
             self.is_infected = False
 
-            # Inmunization level
-            self.update_inmunization_level(becomes_into_disease_state)
+            # immunization level
+            self.update_immunization_level(becomes_into_disease_state)
 
 
-    def update_inmunization_level(
+    def update_immunization_level(
         self,
         becomes_into_disease_state: str
         ):
         """
         """
-        if self.__inmunization_level_gained_by_disease_by_vulnerability_group[
+        if self.__immunization_level_gained_by_disease_by_vulnerability_group[
         self.vulnerability_group][becomes_into_disease_state]:
-            self.inmunization_level += \
-                self.__inmunization_level_gained_by_disease_by_vulnerability_group[
+            self.immunization_level += \
+                self.__immunization_level_gained_by_disease_by_vulnerability_group[
                     self.vulnerability_group][becomes_into_disease_state]
 
 
@@ -1049,7 +1049,7 @@ class Agent:
         self.susceptible_neighbors = []
         self.infected_spreader_neighbors = np.array([])
         self.infected_non_spreader_neighbors = np.array([])
-        self.inmune_neighbors = []
+        self.immune_neighbors = []
         self.total_neighbors = []
 
         # Retrieve agent location
@@ -1082,12 +1082,12 @@ class Agent:
                 if disease_state == 'susceptible':
                     self.susceptible_neighbors = agents_indices_inside_radius.tolist()
 
-                elif disease_state == 'inmune':
-                    self.inmune_neighbors = agents_indices_inside_radius.tolist()
+                elif disease_state == 'immune':
+                    self.immune_neighbors = agents_indices_inside_radius.tolist()
 
                 elif self.__dynamics_of_disease_states_contagion[
                 disease_state]['is_infected']:
-                    # If not susceptible and not inmune
+                    # If not susceptible and not immune
                     # then it must be infected
 
                     if self.__dynamics_of_disease_states_contagion[
@@ -1123,7 +1123,7 @@ class Agent:
 
         # Extend total_neighbors
         self.total_neighbors.extend(self.susceptible_neighbors)
-        self.total_neighbors.extend(self.inmune_neighbors)
+        self.total_neighbors.extend(self.immune_neighbors)
         self.total_neighbors.extend(self.infected_spreader_neighbors)
         self.total_neighbors.extend(self.infected_non_spreader_neighbors)
 
@@ -1510,15 +1510,15 @@ class Agent:
             pass
         elif not previous_diagnosis_state and self.diagnosed:
 
-            # Is agent obedient ? ... Throw the dice
+            # Is agent adherent ? ... Throw the dice
             dice = np.random.random_sample()
 
-            if dice <= self.obedience_to_quarantine:
+            if dice <= self.adherence_to_quarantine:
                 self.quarantine_state = 'Quarantine by diagnosis'
                 self.vx = 0.
                 self.vy = 0.
             else:
-                self.quarantine_state = 'Quarantine by diagnosis - Disobedient'
+                self.quarantine_state = 'Quarantine by diagnosis - Not adherent'
 
         elif previous_diagnosis_state and not self.diagnosed:
 
@@ -1541,7 +1541,7 @@ class Agent:
         """
         if self.quarantine_state not in {
             'Quarantine by diagnosis', 
-            'Quarantine by diagnosis - Disobedient'
+            'Quarantine by diagnosis - Not adherent'
             }:
 
             if decreed_quarantine:
@@ -1550,15 +1550,15 @@ class Agent:
 
                     if self.quarantine_state == 'Not in quarantine':
 
-                        # Is agent obedient ? ... Throw the dice
+                        # Is agent adherent ? ... Throw the dice
                         dice = np.random.random_sample()
 
-                        if dice <= self.obedience_to_quarantine:
+                        if dice <= self.adherence_to_quarantine:
                             self.quarantine_state = 'Quarantine by government'
                             self.vx = 0.
                             self.vy = 0.
                         else:
-                            self.quarantine_state = 'Quarantine by government - Disobedient'
+                            self.quarantine_state = 'Quarantine by government - Not adherent'
 
                 else:
                     if self.quarantine_state == 'Quarantine by government':
@@ -1568,7 +1568,7 @@ class Agent:
                         # Define velocity between (0 , vmax)
                         self.initialize_velocity()
 
-                    if self.quarantine_state == 'Quarantine by government - Disobedient':
+                    if self.quarantine_state == 'Quarantine by government - Not adherent':
                         self.quarantine_state = 'Not in quarantine'
 
             else:

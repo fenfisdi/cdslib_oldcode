@@ -310,9 +310,9 @@ class BasicPopulation:
                     copy_df = df.copy()
                     df['probability'] = [None for x in range(df.shape[0])]
 
-                    for row in copy_df.iterrows():
-                        row_keys = list(row[1].keys())
-                        row_items = row[1].to_list()
+                    for _, row in copy_df.iterrows():
+                        row_keys = list(row.keys())
+                        row_items = row.to_list()
 
                         condition_list = [
                             f"(df['{key}'] == '{item}')"
@@ -327,9 +327,9 @@ class BasicPopulation:
 
                         df.loc[eval(condition), 'probability'] = val
 
-                    for row in df.iterrows():
-                        row_keys = list(row[1].keys())
-                        row_items = row[1].to_list()
+                    for _, row in df.iterrows():
+                        row_keys = list(row.keys())
+                        row_items = row.to_list()
 
                         field = row_keys[-2]
                         filtering_fields = row_keys[:-2]
@@ -460,9 +460,9 @@ class BasicPopulation:
 
                     categorical_filtering_fields = nested_categorical_fields
 
-                    for row in df.iterrows():
+                    for _, row in df.iterrows():
 
-                        categorical_filtering_values = row[1].to_list()
+                        categorical_filtering_values = row.to_list()
 
                         condition_list = [
                             f"(self.initial_population_conditions['{key}'] == '{value}')"
@@ -500,15 +500,12 @@ class BasicPopulation:
                                         f"probability_distribution_function({categorical_arg_string})"
                                         )
                             else:
-                                df = self.initial_population_conditions.loc[
-                                    self.initial_population_conditions['agent'] == agent_index,
-                                    field
-                                    ].copy()
-
-                                agent_dict = df.to_dict(orient='records')
+                                agent_dict = self.initial_population_conditions.loc[
+                                    self.initial_population_conditions['agent'] == agent_index
+                                    ].to_dict(orient='records')[0]
 
                                 arg_list = [
-                                    f"{key} = '{value}'"
+                                    f"{key} = {value}"
                                     for (key, value) in zip(agent_dict.keys(), agent_dict.values())
                                     if key in nested_continous_fields
                                     ]
@@ -539,15 +536,12 @@ class BasicPopulation:
 
                         for agent_index in agents_list:
 
-                            df = self.initial_population_conditions.loc[
-                                self.initial_population_conditions['agent'] == agent_index,
-                                field
-                                ].copy()
-
-                            agent_dict = df.to_dict(orient='records')
+                            agent_dict = self.initial_population_conditions.loc[
+                                self.initial_population_conditions['agent'] == agent_index
+                                ].to_dict(orient='records')[0]
 
                             arg_list = [
-                                f"{key} = '{value}'"
+                                f"{key} = {value}"
                                 for (key, value) in zip(agent_dict.keys(), agent_dict.values())
                                 if key in nested_continous_fields
                                 ]
@@ -626,9 +620,9 @@ class BasicPopulation:
 
                     categorical_filtering_fields = nested_categorical_fields
 
-                    for row in df.iterrows():
+                    for _, row in df.iterrows():
 
-                        categorical_filtering_values = row[1].to_list()
+                        categorical_filtering_values = row.to_list()
 
                         condition_list = [
                             f"(self.initial_population_conditions['{key}'] == '{value}')"
@@ -666,16 +660,12 @@ class BasicPopulation:
                                         f"probability_distribution_function({categorical_arg_string})"
                                         )
                             else:
-                                df = self.initial_population_conditions.loc[
+                                agent_dict = self.initial_population_conditions.loc[
                                     self.initial_population_conditions['agent'] == agent_index
-                                    ].copy()
-
-                                agent_dict_list = df.to_dict(orient='records')
-
-                                agent_dict = agent_dict_list[0]
+                                    ].to_dict(orient='records')[0]
 
                                 arg_list = [
-                                    f"{key} = float('{value}')"
+                                    f"{key} = {value}"
                                     for (key, value) in zip(agent_dict.keys(), agent_dict.values())
                                     if key in nested_continous_fields
                                     ]
@@ -704,15 +694,12 @@ class BasicPopulation:
 
                         for agent_index in agents_list:
 
-                            df = self.initial_population_conditions.loc[
-                                self.initial_population_conditions['agent'] == agent_index,
-                                field
-                                ].copy()
-
-                            agent_dict = df.to_dict(orient='records')
+                            agent_dict = self.initial_population_conditions.loc[
+                                self.initial_population_conditions['agent'] == agent_index
+                                ].to_dict(orient='records')[0]
 
                             arg_list = [
-                                f"{key} = '{value}'"
+                                f"{key} = {value}"
                                 for (key, value) in zip(agent_dict.keys(), agent_dict.values())
                                 if key in nested_continous_fields
                                 ]
