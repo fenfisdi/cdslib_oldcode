@@ -164,28 +164,28 @@ class Agent:
                 )
 
 
-        avoidness_radius_list = []
+        avoidance_radius_list = []
 
         for vul_group in self.__vulnerability_groups:
 
             for dis_state in self.__disease_states:
 
-                avoidness_radius_list.append(
+                avoidance_radius_list.append(
                     self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
-                    vul_group][dis_state]['avoidness_radius']
+                    vul_group][dis_state]['avoidance_radius']
                     )
 
         spread_radius_arr = np.array(spread_radius_list, dtype=np.float)
         spread_radius_arr = np.nan_to_num(spread_radius_arr, nan=-np.inf)
         max_spread_radius = spread_radius_arr.max()
 
-        avoidness_radius_arr = np.array(avoidness_radius_list, dtype=np.float)
-        avoidness_radius_arr = np.nan_to_num(avoidness_radius_arr, nan=-np.inf)
-        max_avoidness_radius = avoidness_radius_arr.max()
+        avoidance_radius_arr = np.array(avoidance_radius_list, dtype=np.float)
+        avoidance_radius_arr = np.nan_to_num(avoidance_radius_arr, nan=-np.inf)
+        max_avoidance_radius = avoidance_radius_arr.max()
 
         self.tracing_radius = np.maximum(
             max_spread_radius,
-            max_avoidness_radius
+            max_avoidance_radius
             )
 
         # Define vmax
@@ -1165,12 +1165,12 @@ class Agent:
                     and spatial_trees_by_disease_state[disease_state]):
 
                     # Detect if any avoidable agent is inside a distance
-                    # equal to the corresponding avoidness_radius
+                    # equal to the corresponding avoidance_radius
                     points_inside_radius = \
                         spatial_trees_by_disease_state[disease_state].query_ball_point(
                             agent_location,
                             self.__dynamics_of_avoidance_of_disease_states_by_vulnerability_group[
-                            self.vulnerability_group][disease_state]['avoidness_radius']
+                            self.vulnerability_group][disease_state]['avoidance_radius']
                             )
 
                     avoidable_neighbors = \
