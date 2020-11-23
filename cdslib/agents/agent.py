@@ -1572,7 +1572,14 @@ class Agent:
                         self.quarantine_state = 'Not in quarantine'
 
             else:
-                if self.quarantine_state != 'Not in quarantine':
+                if self.quarantine_state == 'Quarantine by government':
+
+                    self.quarantine_state = 'Not in quarantine'
+
+                    # Define velocity between (0 , vmax)
+                    self.initialize_velocity()
+
+                if self.quarantine_state == 'Quarantine by government - Not adherent':
                     self.quarantine_state = 'Not in quarantine'
 
 
